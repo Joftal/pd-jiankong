@@ -27,7 +27,7 @@ const includes={
     }),
     bot:new TelegramBot(),
     template:{
-        networkError:'网络错误，请重试。'
+        networkError:'信息错误，请重试。'
     },
     formatWatchMessagePartial(arr){
         let str='';
@@ -44,7 +44,7 @@ const includes={
             str+=vtb.liveStatus?'  ['+cleanedTitle+'](https://5721004.xyz/player/pandalive.html?url='+vtb.mid+')\n':'';
             str+='\n';
         }
-        return str;
+        return str+'\n~';
     },
     listWatchMessagePartial(arr){
         let online = '';
@@ -62,9 +62,9 @@ const includes={
             }
         }
         // 合并在线和离线主播信息
-        let str = online + offline;
+        let str = online + offline ;
 
-        return str;
+        return str+'\n~';
     },
     emitter:new EventEmitter(),
     formatTgKeyboard(arr){
