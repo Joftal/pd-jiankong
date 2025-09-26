@@ -74,13 +74,22 @@ jobs:
     - name: 验证构建结果
       shell: pwsh
       run: |
-        if (Test-Path "dist\PD-Signal.exe") {
+        if (Test-Path "dist\PD-Signal\PD-Signal.exe") {
           Write-Output "✅ 测试版可执行文件构建成功"
-          $fileSize = (Get-Item "dist\PD-Signal.exe").Length / 1MB
+          $fileSize = (Get-Item "dist\PD-Signal\PD-Signal.exe").Length / 1MB
           Write-Output "文件大小: $([math]::Round($fileSize, 2)) MB"
           
+          # 检查_internal文件夹是否存在
+          if (Test-Path "dist\PD-Signal\_internal") {
+            Write-Output "✅ _internal依赖文件夹存在"
+            $internalSize = (Get-ChildItem "dist\PD-Signal\_internal" -Recurse | Measure-Object -Property Length -Sum).Sum / 1MB
+            Write-Output "_internal文件夹大小: $([math]::Round($internalSize, 2)) MB"
+          } else {
+            Write-Output "⚠️ _internal依赖文件夹不存在"
+          }
+          
           # 检查文件是否可执行
-          $fileInfo = Get-Item "dist\PD-Signal.exe"
+          $fileInfo = Get-Item "dist\PD-Signal\PD-Signal.exe"
           Write-Output "文件版本: $($fileInfo.VersionInfo.FileVersion)"
           Write-Output "创建时间: $($fileInfo.CreationTime)"
           Write-Output "修改时间: $($fileInfo.LastWriteTime)"
@@ -96,9 +105,11 @@ jobs:
         if (Test-Path $releaseDir) { Remove-Item -Recurse -Force $releaseDir }
         New-Item -ItemType Directory $releaseDir
         
-        # 复制主要文件
-        Copy-Item "dist\PD-Signal.exe" "$releaseDir\"
-        Copy-Item "dist\使用说明.txt" "$releaseDir\"
+        # 复制整个PD-Signal目录（包含所有依赖）
+        Copy-Item "dist\PD-Signal" "$releaseDir\" -Recurse
+        
+        # 复制使用说明
+        Copy-Item "dist\使用说明.txt" "$releaseDir\" -ErrorAction SilentlyContinue
         
         # 复制源码和文档
         New-Item -ItemType Directory "$releaseDir\source"
@@ -108,7 +119,7 @@ jobs:
         Copy-Item "project_overview.md" "$releaseDir\source\"
         
         # 创建测试说明
-        $testInfo = "PD Signal - PandaLive监控工具 (测试版)`n版本: 测试版`n构建时间: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')`n构建环境: GitHub Actions Windows (测试)`nPython版本: ${{ env.PYTHON_VERSION }}`nGit提交: ${{ github.sha }}`n分支: ${{ github.ref_name }}`n`n🧪 测试说明:`n- 这是开发测试版本`n- 用于验证构建流程和基本功能`n- 可能包含未完成的功能或已知问题`n- 不建议在生产环境使用`n`n✅ 测试内容:`n- Python模块导入测试`n- 依赖库版本检查`n- 可执行文件构建测试`n- 文件完整性验证"
+        $testInfo = "PD Signal - PandaLive监控工具 (测试版)`n版本: 测试版`n构建时间: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')`n构建环境: GitHub Actions Windows (测试)`nPython版本: ${{ env.PYTHON_VERSION }}`nGit提交: ${{ github.sha }}`n分支: ${{ github.ref_name }}`n`n🧪 测试说明:`n- 这是开发测试版本`n- 用于验证构建流程和基本功能`n- 可能包含未完成的功能或已知问题`n- 不建议在生产环境使用`n`n✅ 测试内容:`n- Python模块导入测试`n- 依赖库版本检查`n- 可执行文件构建测试`n- 文件完整性验证`n- _internal依赖文件夹检查`n`n📁 文件结构:`n- PD-Signal.exe (主程序)`n- _internal/ (所有依赖文件)`n- 使用说明.txt (使用说明)`n- source/ (源代码)`n`n💡 使用说明:`n1. 直接运行 PD-Signal.exe 启动程序`n2. 程序包含所有依赖，无需额外安装`n3. 已修复重复创建进程的问题`n4. 支持单实例运行，避免多开"
         $testInfo | Out-File -FilePath "$releaseDir\测试说明.txt" -Encoding UTF8
         
     - name: 上传测试版构建产物
@@ -128,8 +139,25 @@ jobs:
         Write-Output "=========================================="
         Write-Output "📁 构建产物:"
         Get-ChildItem "dist" | ForEach-Object {
-          $size = $_.Length / 1MB
-          Write-Output "   - $($_.Name) ($([math]::Round($size, 2)) MB)"
+          if ($_.PSIsContainer) {
+            Write-Output "   - $($_.Name)/ (目录)"
+            # 列出目录中的主要文件
+            try {
+              Get-ChildItem $_.FullName | ForEach-Object {
+                if ($_.PSIsContainer) {
+                  Write-Output "     - $($_.Name)/ (子目录)"
+                } else {
+                  $size = $_.Length / 1MB
+                  Write-Output "     - $($_.Name) ($([math]::Round($size, 2)) MB)"
+                }
+              }
+            } catch {
+              Write-Output "     - (无法访问目录内容)"
+            }
+          } else {
+            $size = $_.Length / 1MB
+            Write-Output "   - $($_.Name) ($([math]::Round($size, 2)) MB)"
+          }
         }
         Write-Output ""
         Write-Output "📦 测试版发布包:"
@@ -145,6 +173,8 @@ jobs:
         Write-Output ""
         Write-Output "💡 使用说明:"
         Write-Output "   1. 这是测试版本，用于验证构建流程"
-        Write-Output "   2. 下载 PD-Signal.exe 进行测试"
-        Write-Output "   3. 查看 测试说明.txt 了解测试详情"
+        Write-Output "   2. 运行 PD-Signal/PD-Signal.exe 进行测试"
+        Write-Output "   3. 程序包含所有依赖，无需额外安装"
+        Write-Output "   4. 已修复重复创建进程的问题"
+        Write-Output "   5. 查看 测试说明.txt 了解测试详情"
         Write-Output "=========================================="
