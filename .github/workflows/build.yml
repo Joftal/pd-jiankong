@@ -20,6 +20,19 @@ jobs:
       with:
         python-version: '3.11'  # 使用稳定的Python版本
         
+    - name: Debug environment
+      run: |
+        echo "🔍 调试环境信息..."
+        echo "Python版本:"
+        python --version
+        echo "Python路径:"
+        which python || where python
+        echo "当前工作目录:"
+        pwd
+        echo "文件列表:"
+        ls -la || dir
+        echo "✅ 环境调试完成"
+        
     - name: Cache pip dependencies
       uses: actions/cache@v3
       with:
@@ -30,20 +43,24 @@ jobs:
           
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install pyinstaller
+        echo "🔧 开始安装依赖项..."
+        python -m pip install --upgrade pip || { echo "❌ pip升级失败"; exit 1; }
+        pip install -r requirements.txt || { echo "❌ 依赖安装失败"; exit 1; }
+        pip install pyinstaller || { echo "❌ PyInstaller安装失败"; exit 1; }
+        echo "✅ 依赖项安装完成"
         
     - name: Verify installation
       run: |
         python --version
         pip list | findstr -i "flet requests plyer pyinstaller"
+      shell: cmd
         
     - name: Clean previous builds
       run: |
         if exist "build" rmdir /s /q "build"
         if exist "dist" rmdir /s /q "dist"
         if exist "*.spec" del /q "*.spec"
+      shell: cmd
         
     - name: Build executable
       run: |
@@ -73,6 +90,7 @@ jobs:
           echo "❌ Readme not found"
           exit 1
         )
+      shell: cmd
         
     - name: Create release package
       run: |
@@ -97,6 +115,7 @@ jobs:
         
         echo "Release package created successfully"
         dir "release\PD-Signal-GitHub" /b
+      shell: cmd
         
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
@@ -153,6 +172,20 @@ jobs:
       with:
         python-version: '3.11'
         
+    - name: Debug environment
+      run: |
+        set -x
+        echo "🔍 调试环境信息..."
+        echo "Python版本:"
+        python --version
+        echo "Python路径:"
+        which python
+        echo "当前工作目录:"
+        pwd
+        echo "文件列表:"
+        ls -la
+        echo "✅ 环境调试完成"
+        
     - name: Cache pip dependencies
       uses: actions/cache@v3
       with:
@@ -163,9 +196,12 @@ jobs:
           
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install pyinstaller
+        set -x
+        echo "🔧 开始安装依赖项..."
+        python -m pip install --upgrade pip || { echo "❌ pip升级失败"; exit 1; }
+        pip install -r requirements.txt || { echo "❌ 依赖安装失败"; exit 1; }
+        pip install pyinstaller || { echo "❌ PyInstaller安装失败"; exit 1; }
+        echo "✅ 依赖项安装完成"
         
     - name: Verify installation
       run: |
@@ -233,6 +269,30 @@ jobs:
       with:
         python-version: '3.11'
         
+    - name: Debug environment
+      run: |
+        set -x
+        echo "🔍 调试环境信息..."
+        echo "Python版本:"
+        python --version
+        echo "Python路径:"
+        which python
+        echo "当前工作目录:"
+        pwd
+        echo "文件列表:"
+        ls -la
+        echo "✅ 环境调试完成"
+        
+    - name: Install system dependencies (macOS)
+      run: |
+        set -x
+        echo "🔧 安装macOS系统依赖..."
+        # 安装Xcode命令行工具（如果未安装）
+        xcode-select --install 2>/dev/null || echo "Xcode命令行工具已安装"
+        # 安装必要的系统库
+        brew install --quiet libffi || echo "libffi已安装或安装失败"
+        echo "✅ 系统依赖安装完成"
+        
     - name: Cache pip dependencies
       uses: actions/cache@v3
       with:
@@ -243,52 +303,71 @@ jobs:
           
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install pyinstaller
+        set -x
+        echo "🔧 开始安装依赖项..."
+        python -m pip install --upgrade pip || { echo "❌ pip升级失败"; exit 1; }
+        pip install -r requirements.txt || { echo "❌ 依赖安装失败"; exit 1; }
+        pip install pyinstaller || { echo "❌ PyInstaller安装失败"; exit 1; }
+        echo "✅ 依赖项安装完成"
         
     - name: Verify installation
       run: |
+        set -x
+        echo "🔍 验证安装..."
         python --version
         pip list | grep -i "flet requests plyer pyinstaller"
+        echo "✅ 安装验证完成"
         
     - name: Clean previous builds
       run: |
+        set -x
+        echo "🧹 清理之前的构建..."
         rm -rf build dist *.spec
+        echo "✅ 清理完成"
         
     - name: Build executable
       run: |
-        python build_github_action.py
+        set -x
+        echo "🔨 开始构建可执行文件..."
+        python build_github_action.py || { echo "❌ 构建脚本失败"; exit 1; }
+        echo "✅ 构建完成"
         
     - name: Verify build output
       run: |
-        echo "Checking build output..."
+        set -x
+        echo "🔍 检查构建输出..."
         if [ -f "dist/PD-Signal/PD-Signal" ]; then
-          echo "✅ Main executable found"
+          echo "✅ 主可执行文件已找到"
           ls -la "dist/PD-Signal/PD-Signal"
+          file "dist/PD-Signal/PD-Signal"
         else
-          echo "❌ Main executable not found"
+          echo "❌ 主可执行文件未找到"
+          echo "📁 检查dist目录内容:"
+          ls -la dist/ || echo "dist目录不存在"
+          echo "📁 检查PD-Signal目录内容:"
+          ls -la dist/PD-Signal/ || echo "PD-Signal目录不存在"
           exit 1
         fi
         
     - name: Create release package
       run: |
-        echo "Creating release package..."
+        set -x
+        echo "📦 创建发布包..."
         mkdir -p release/PD-Signal-macOS
         
         # Copy main executable and dependencies
         cp -r dist/PD-Signal/* release/PD-Signal-macOS/
         
         # Copy additional files
-        cp dist/使用说明.txt release/PD-Signal-macOS/
+        cp dist/使用说明.txt release/PD-Signal-macOS/ || echo "⚠️ 使用说明.txt未找到"
         
         # Copy source code
         mkdir -p release/PD-Signal-macOS/source
         cp *.py release/PD-Signal-macOS/source/
         cp requirements.txt release/PD-Signal-macOS/source/
-        cp README*.md release/PD-Signal-macOS/source/ 2>/dev/null || true
+        cp README*.md release/PD-Signal-macOS/source/ 2>/dev/null || echo "⚠️ README文件未找到"
         
-        echo "Release package created successfully"
+        echo "✅ 发布包创建成功"
         ls -la release/PD-Signal-macOS/
         
     - name: Upload build artifacts

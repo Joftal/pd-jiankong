@@ -22,13 +22,17 @@ jobs:
         
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install pyinstaller
+        echo "🔧 开始安装依赖项..."
+        python -m pip install --upgrade pip || { echo "❌ pip升级失败"; exit 1; }
+        pip install -r requirements.txt || { echo "❌ 依赖安装失败"; exit 1; }
+        pip install pyinstaller || { echo "❌ PyInstaller安装失败"; exit 1; }
+        echo "✅ 依赖项安装完成"
         
     - name: Build executable
       run: |
-        python build_github_action.py
+        echo "🔨 开始构建可执行文件..."
+        python build_github_action.py || { echo "❌ 构建脚本失败"; exit 1; }
+        echo "✅ 构建完成"
         
     - name: Test executable
       run: |
@@ -40,6 +44,7 @@ jobs:
           echo "❌ Executable not found"
           exit 1
         )
+      shell: cmd
         
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
