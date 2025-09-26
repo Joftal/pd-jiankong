@@ -53,6 +53,7 @@ jobs:
         python -m pip install pyinstaller
         
     - name: 验证环境
+      shell: pwsh
       run: |
         python --version
         python -c "import sys; print('Python路径:', sys.executable)"
@@ -65,22 +66,24 @@ jobs:
         if (Test-Path "*.spec") { Remove-Item -Force "*.spec" }
         
     - name: 构建Windows可执行文件
+      shell: pwsh
       run: |
-        Write-Host "开始构建Windows版本..."
+        Write-Output "开始构建Windows版本..."
         python build.py
         
     - name: 验证构建结果
+      shell: pwsh
       run: |
         if (Test-Path "dist\PD-Signal.exe") {
-          Write-Host "✅ Windows可执行文件构建成功"
+          Write-Output "✅ Windows可执行文件构建成功"
           $fileSize = (Get-Item "dist\PD-Signal.exe").Length / 1MB
-          Write-Host "文件大小: $([math]::Round($fileSize, 2)) MB"
+          Write-Output "文件大小: $([math]::Round($fileSize, 2)) MB"
           
           # 检查文件是否可执行
           $fileInfo = Get-Item "dist\PD-Signal.exe"
-          Write-Host "文件版本: $($fileInfo.VersionInfo.FileVersion)"
+          Write-Output "文件版本: $($fileInfo.VersionInfo.FileVersion)"
         } else {
-          Write-Host "❌ Windows可执行文件构建失败"
+          Write-Output "❌ Windows可执行文件构建失败"
           exit 1
         }
         

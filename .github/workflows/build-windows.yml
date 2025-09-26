@@ -54,13 +54,14 @@ jobs:
         python build.py
         
     - name: 验证构建结果
+      shell: pwsh
       run: |
         if (Test-Path "dist\PD-Signal.exe") {
-          Write-Host "✅ 可执行文件构建成功"
+          Write-Output "✅ 可执行文件构建成功"
           $fileSize = (Get-Item "dist\PD-Signal.exe").Length / 1MB
-          Write-Host "文件大小: $([math]::Round($fileSize, 2)) MB"
+          Write-Output "文件大小: $([math]::Round($fileSize, 2)) MB"
         } else {
-          Write-Host "❌ 可执行文件构建失败"
+          Write-Output "❌ 可执行文件构建失败"
           exit 1
         }
         
@@ -118,22 +119,23 @@ Python版本: ${{ env.PYTHON_VERSION }}
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         
     - name: 输出构建信息
+      shell: pwsh
       run: |
-        Write-Host "=========================================="
-        Write-Host "🎉 构建完成！"
-        Write-Host "=========================================="
-        Write-Host "📁 构建产物:"
+        Write-Output "=========================================="
+        Write-Output "🎉 构建完成！"
+        Write-Output "=========================================="
+        Write-Output "📁 构建产物:"
         Get-ChildItem "dist" | ForEach-Object {
           $size = $_.Length / 1MB
-          Write-Host "   - $($_.Name) ($([math]::Round($size, 2)) MB)"
+          Write-Output "   - $($_.Name) ($([math]::Round($size, 2)) MB)"
         }
-        Write-Host ""
-        Write-Host "📦 发布包:"
+        Write-Output ""
+        Write-Output "📦 发布包:"
         Get-ChildItem "release\PD-Signal" | ForEach-Object {
-          Write-Host "   - $($_.Name)"
+          Write-Output "   - $($_.Name)"
         }
-        Write-Host ""
-        Write-Host "💡 使用说明:"
-        Write-Host "   1. 下载 PD-Signal.exe 运行程序"
-        Write-Host "   2. 使用 启动PD-Signal.bat 可查看控制台输出"
-        Write-Host "   3. 阅读 使用说明.txt 了解详细用法"
+        Write-Output ""
+        Write-Output "💡 使用说明:"
+        Write-Output "   1. 下载 PD-Signal.exe 运行程序"
+        Write-Output "   2. 使用 启动PD-Signal.bat 可查看控制台输出"
+        Write-Output "   3. 阅读 使用说明.txt 了解详细用法"

@@ -10,6 +10,11 @@ import shutil
 import subprocess
 from pathlib import Path
 
+# 设置UTF-8编码以支持Unicode字符
+if sys.platform == 'win32':
+    sys.stdout.reconfigure(encoding='utf-8')
+    sys.stderr.reconfigure(encoding='utf-8')
+
 def check_dependencies():
     """检查必要的依赖"""
     try:

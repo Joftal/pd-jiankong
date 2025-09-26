@@ -30,6 +30,7 @@ jobs:
         python -m pip install pyinstaller pytest
         
     - name: 运行基础测试
+      shell: pwsh
       run: |
         # 测试Python模块导入
         python -c "import main; print('✅ main模块导入成功')"
@@ -50,23 +51,25 @@ jobs:
         if (Test-Path "*.spec") { Remove-Item -Force "*.spec" }
         
     - name: 构建可执行文件
+      shell: pwsh
       run: |
-        Write-Host "开始构建..."
+        Write-Output "开始构建..."
         python build.py
         
     - name: 验证构建结果
+      shell: pwsh
       run: |
         if (Test-Path "dist\PD-Signal.exe") {
-          Write-Host "✅ 构建成功！"
+          Write-Output "✅ 构建成功！"
           $fileSize = (Get-Item "dist\PD-Signal.exe").Length / 1MB
-          Write-Host "文件大小: $([math]::Round($fileSize, 2)) MB"
+          Write-Output "文件大小: $([math]::Round($fileSize, 2)) MB"
           
           # 检查文件信息
           $fileInfo = Get-Item "dist\PD-Signal.exe"
-          Write-Host "创建时间: $($fileInfo.CreationTime)"
-          Write-Host "修改时间: $($fileInfo.LastWriteTime)"
+          Write-Output "创建时间: $($fileInfo.CreationTime)"
+          Write-Output "修改时间: $($fileInfo.LastWriteTime)"
         } else {
-          Write-Host "❌ 构建失败"
+          Write-Output "❌ 构建失败"
           exit 1
         }
         
@@ -78,11 +81,12 @@ jobs:
         retention-days: 7
         
     - name: 输出构建信息
+      shell: pwsh
       run: |
-        Write-Host "=========================================="
-        Write-Host "🎉 测试构建完成！"
-        Write-Host "=========================================="
-        Write-Host "分支: ${{ github.ref_name }}"
-        Write-Host "提交: ${{ github.sha }}"
-        Write-Host "Python版本: ${{ env.PYTHON_VERSION }}"
-        Write-Host "=========================================="
+        Write-Output "=========================================="
+        Write-Output "🎉 测试构建完成！"
+        Write-Output "=========================================="
+        Write-Output "分支: ${{ github.ref_name }}"
+        Write-Output "提交: ${{ github.sha }}"
+        Write-Output "Python版本: ${{ env.PYTHON_VERSION }}"
+        Write-Output "=========================================="
