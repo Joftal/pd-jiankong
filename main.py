@@ -1240,22 +1240,90 @@ class PDSignalApp:
         except Exception as e:
             print(f"清理资源时出错: {e}")
 
+def cleanup_lock_file():
+    """清理锁文件"""
+    try:
+        # 获取可执行文件所在目录
+        if getattr(sys, 'frozen', False):
+            app_dir = os.path.dirname(sys.executable)
+        else:
+            app_dir = os.path.dirname(__file__)
+        
+        lock_file = os.path.join(app_dir, 'pd_signal.lock')
+        
+        if os.path.exists(lock_file):
+            # 检查锁文件中的PID是否与当前进程匹配
+            try:
+                with open(lock_file, 'r') as f:
+                    pid = int(f.read().strip())
+                if pid == os.getpid():
+                    os.remove(lock_file)
+                    print("✅ 锁文件已清理")
+            except (ValueError, OSError):
+                # 锁文件损坏或无法读取，直接删除
+                try:
+                    os.remove(lock_file)
+                    print("✅ 损坏的锁文件已清理")
+                except OSError:
+                    pass
+    except Exception as e:
+        print(f"清理锁文件时出错: {e}")
+
 def check_single_instance():
     """检查是否已有实例在运行"""
     try:
-        # 尝试绑定到一个本地端口
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.settimeout(1)
-        sock.bind(('localhost', 12345))  # 使用固定端口
-        sock.listen(1)
-        return True  # 成功绑定，说明没有其他实例
-    except socket.error:
-        return False  # 绑定失败，说明已有实例在运行
-    finally:
+        # 使用文件锁而不是端口绑定，更可靠
+        import tempfile
+        import fcntl
+        
+        # 获取可执行文件所在目录
+        if getattr(sys, 'frozen', False):
+            app_dir = os.path.dirname(sys.executable)
+        else:
+            app_dir = os.path.dirname(__file__)
+        
+        lock_file = os.path.join(app_dir, 'pd_signal.lock')
+        
+        # 尝试创建锁文件
         try:
-            sock.close()
-        except:
-            pass
+            with open(lock_file, 'w') as f:
+                f.write(str(os.getpid()))
+            return True
+        except (OSError, IOError):
+            # 检查锁文件是否存在且进程是否还在运行
+            if os.path.exists(lock_file):
+                try:
+                    with open(lock_file, 'r') as f:
+                        pid = int(f.read().strip())
+                    # 检查进程是否存在
+                    if sys.platform == 'win32':
+                        import subprocess
+                        result = subprocess.run(['tasklist', '/FI', f'PID eq {pid}'], 
+                                              capture_output=True, text=True)
+                        if str(pid) in result.stdout:
+                            return False  # 进程还在运行
+                    else:
+                        try:
+                            os.kill(pid, 0)
+                            return False  # 进程还在运行
+                        except OSError:
+                            pass  # 进程不存在
+                    
+                    # 进程不存在，删除锁文件
+                    os.remove(lock_file)
+                    return True
+                except (ValueError, OSError):
+                    # 锁文件损坏，删除它
+                    try:
+                        os.remove(lock_file)
+                    except OSError:
+                        pass
+                    return True
+            return True
+    except Exception as e:
+        print(f"单实例检查出错: {e}")
+        # 出错时允许启动，避免阻止程序运行
+        return True
 
 def main():
     """主函数"""
@@ -1275,6 +1343,9 @@ def main():
         print(f"❌ 程序启动失败: {e}")
         input("按回车键退出...")
         sys.exit(1)
+    finally:
+        # 程序退出时清理锁文件
+        cleanup_lock_file()
 
 if __name__ == "__main__":
     main()

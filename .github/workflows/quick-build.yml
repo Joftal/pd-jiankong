@@ -1,0 +1,50 @@
+name: Quick Build Test
+
+on:
+  push:
+    branches: [ main, master, Cookie ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build-test:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pyinstaller
+        
+    - name: Build executable
+      run: |
+        python build_github_action.py
+        
+    - name: Test executable
+      run: |
+        echo "Testing executable..."
+        if exist "dist\PD-Signal\PD-Signal.exe" (
+          echo "✅ Executable built successfully"
+          dir "dist\PD-Signal\PD-Signal.exe"
+        ) else (
+          echo "❌ Executable not found"
+          exit 1
+        )
+        
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: PD-Signal-Test-${{ github.run_number }}
+        path: |
+          dist/
+        retention-days: 7

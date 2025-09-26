@@ -1,0 +1,300 @@
+name: Build PD Signal
+
+on:
+  push:
+    branches: [ main, master, Cookie ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:  # 允许手动触发
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'  # 使用稳定的Python版本
+        
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~\AppData\Local\pip\Cache
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+          
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pyinstaller
+        
+    - name: Verify installation
+      run: |
+        python --version
+        pip list | findstr -i "flet requests plyer pyinstaller"
+        
+    - name: Clean previous builds
+      run: |
+        if exist "build" rmdir /s /q "build"
+        if exist "dist" rmdir /s /q "dist"
+        if exist "*.spec" del /q "*.spec"
+        
+    - name: Build executable
+      run: |
+        python build_github_action.py
+        
+    - name: Verify build output
+      run: |
+        echo "Checking build output..."
+        if exist "dist\PD-Signal\PD-Signal.exe" (
+          echo "✅ Main executable found"
+          dir "dist\PD-Signal\PD-Signal.exe"
+        ) else (
+          echo "❌ Main executable not found"
+          exit 1
+        )
+        
+        if exist "dist\启动PD-Signal.bat" (
+          echo "✅ Startup script found"
+        ) else (
+          echo "❌ Startup script not found"
+          exit 1
+        )
+        
+        if exist "dist\使用说明.txt" (
+          echo "✅ Readme found"
+        ) else (
+          echo "❌ Readme not found"
+          exit 1
+        )
+        
+    - name: Create release package
+      run: |
+        echo "Creating release package..."
+        if not exist "release" mkdir "release"
+        if exist "release\PD-Signal-GitHub" rmdir /s /q "release\PD-Signal-GitHub"
+        mkdir "release\PD-Signal-GitHub"
+        
+        REM Copy main executable and dependencies
+        xcopy "dist\PD-Signal\*" "release\PD-Signal-GitHub\" /E /I /Y
+        
+        REM Copy additional files
+        copy "dist\启动PD-Signal.bat" "release\PD-Signal-GitHub\"
+        copy "dist\调试模式.bat" "release\PD-Signal-GitHub\"
+        copy "dist\使用说明.txt" "release\PD-Signal-GitHub\"
+        
+        REM Copy source code
+        mkdir "release\PD-Signal-GitHub\source"
+        copy "*.py" "release\PD-Signal-GitHub\source\"
+        copy "requirements.txt" "release\PD-Signal-GitHub\source\"
+        copy "README*.md" "release\PD-Signal-GitHub\source\"
+        
+        echo "Release package created successfully"
+        dir "release\PD-Signal-GitHub" /b
+        
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: PD-Signal-Windows-${{ github.run_number }}
+        path: |
+          release/PD-Signal-GitHub/
+        retention-days: 30
+        
+    - name: Create Release (on tag)
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          release/PD-Signal-GitHub/PD-Signal.exe
+          release/PD-Signal-GitHub/启动PD-Signal.bat
+          release/PD-Signal-GitHub/调试模式.bat
+          release/PD-Signal-GitHub/使用说明.txt
+        body: |
+          ## PD Signal - PandaLive监控工具
+          
+          ### 功能特点
+          - ✅ 支持多主播同时监控
+          - ✅ 实时开播/下播通知
+          - ✅ Windows系统通知
+          - ✅ 数据持久化存储
+          - ✅ 现代化GUI界面
+          - ✅ 配置自动保存
+          
+          ### 使用说明
+          1. 运行 `PD-Signal.exe` 启动程序
+          2. 使用 `启动PD-Signal.bat` 可以查看控制台输出
+          3. 使用 `调试模式.bat` 可以查看详细错误信息
+          4. 阅读 `使用说明.txt` 了解详细使用方法
+          
+          ### 构建信息
+          - 构建时间: ${{ github.event.head_commit.timestamp }}
+          - 提交哈希: ${{ github.sha }}
+          - 分支: ${{ github.ref_name }}
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-linux:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+          
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pyinstaller
+        
+    - name: Verify installation
+      run: |
+        python --version
+        pip list | grep -i "flet requests plyer pyinstaller"
+        
+    - name: Clean previous builds
+      run: |
+        rm -rf build dist *.spec
+        
+    - name: Build executable
+      run: |
+        python build_github_action.py
+        
+    - name: Verify build output
+      run: |
+        echo "Checking build output..."
+        if [ -f "dist/PD-Signal/PD-Signal" ]; then
+          echo "✅ Main executable found"
+          ls -la "dist/PD-Signal/PD-Signal"
+        else
+          echo "❌ Main executable not found"
+          exit 1
+        fi
+        
+    - name: Create release package
+      run: |
+        echo "Creating release package..."
+        mkdir -p release/PD-Signal-Linux
+        
+        # Copy main executable and dependencies
+        cp -r dist/PD-Signal/* release/PD-Signal-Linux/
+        
+        # Copy additional files
+        cp dist/启动PD-Signal.bat release/PD-Signal-Linux/ 2>/dev/null || true
+        cp dist/调试模式.bat release/PD-Signal-Linux/ 2>/dev/null || true
+        cp dist/使用说明.txt release/PD-Signal-Linux/
+        
+        # Copy source code
+        mkdir -p release/PD-Signal-Linux/source
+        cp *.py release/PD-Signal-Linux/source/
+        cp requirements.txt release/PD-Signal-Linux/source/
+        cp README*.md release/PD-Signal-Linux/source/ 2>/dev/null || true
+        
+        echo "Release package created successfully"
+        ls -la release/PD-Signal-Linux/
+        
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: PD-Signal-Linux-${{ github.run_number }}
+        path: |
+          release/PD-Signal-Linux/
+        retention-days: 30
+
+  build-macos:
+    runs-on: macos-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/Library/Caches/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+          
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pyinstaller
+        
+    - name: Verify installation
+      run: |
+        python --version
+        pip list | grep -i "flet requests plyer pyinstaller"
+        
+    - name: Clean previous builds
+      run: |
+        rm -rf build dist *.spec
+        
+    - name: Build executable
+      run: |
+        python build_github_action.py
+        
+    - name: Verify build output
+      run: |
+        echo "Checking build output..."
+        if [ -f "dist/PD-Signal/PD-Signal" ]; then
+          echo "✅ Main executable found"
+          ls -la "dist/PD-Signal/PD-Signal"
+        else
+          echo "❌ Main executable not found"
+          exit 1
+        fi
+        
+    - name: Create release package
+      run: |
+        echo "Creating release package..."
+        mkdir -p release/PD-Signal-macOS
+        
+        # Copy main executable and dependencies
+        cp -r dist/PD-Signal/* release/PD-Signal-macOS/
+        
+        # Copy additional files
+        cp dist/使用说明.txt release/PD-Signal-macOS/
+        
+        # Copy source code
+        mkdir -p release/PD-Signal-macOS/source
+        cp *.py release/PD-Signal-macOS/source/
+        cp requirements.txt release/PD-Signal-macOS/source/
+        cp README*.md release/PD-Signal-macOS/source/ 2>/dev/null || true
+        
+        echo "Release package created successfully"
+        ls -la release/PD-Signal-macOS/
+        
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: PD-Signal-macOS-${{ github.run_number }}
+        path: |
+          release/PD-Signal-macOS/
+        retention-days: 30
