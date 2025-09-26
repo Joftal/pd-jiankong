@@ -301,21 +301,62 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/')
     needs: [build-windows, build-linux, build-macos]
     runs-on: ubuntu-latest
+    continue-on-error: false
     
     steps:
     - name: 下载所有构建产物
       uses: actions/download-artifact@v4
       
+    - name: 列出下载的文件
+      run: |
+        echo "=== 下载的构建产物 ==="
+        find . -name "*.exe" -o -name "PD-Signal" -o -name "*.txt" -o -name "*.md" | head -20
+        echo ""
+        echo "=== 目录结构 ==="
+        ls -la
+        echo ""
+        echo "=== Windows产物 ==="
+        ls -la PD-Signal-Windows-*/ 2>/dev/null || echo "Windows产物未找到"
+        echo ""
+        echo "=== Linux产物 ==="
+        ls -la PD-Signal-Linux-*/ 2>/dev/null || echo "Linux产物未找到"
+        echo ""
+        echo "=== macOS产物 ==="
+        ls -la PD-Signal-macOS-*/ 2>/dev/null || echo "macOS产物未找到"
+      
+    - name: 准备发布文件
+      run: |
+        # 创建发布目录
+        mkdir -p release-files
+        
+        # 复制Windows文件
+        if [ -d "PD-Signal-Windows-"* ]; then
+          echo "复制Windows文件..."
+          cp PD-Signal-Windows-*/dist/PD-Signal.exe release-files/ 2>/dev/null || echo "Windows exe未找到"
+          cp PD-Signal-Windows-*/release/PD-Signal-Windows/* release-files/ 2>/dev/null || echo "Windows发布包未找到"
+        fi
+        
+        # 复制Linux文件
+        if [ -d "PD-Signal-Linux-"* ]; then
+          echo "复制Linux文件..."
+          cp PD-Signal-Linux-*/dist/PD-Signal release-files/ 2>/dev/null || echo "Linux可执行文件未找到"
+          cp PD-Signal-Linux-*/release/PD-Signal-Linux/* release-files/ 2>/dev/null || echo "Linux发布包未找到"
+        fi
+        
+        # 复制macOS文件
+        if [ -d "PD-Signal-macOS-"* ]; then
+          echo "复制macOS文件..."
+          cp PD-Signal-macOS-*/dist/PD-Signal release-files/ 2>/dev/null || echo "macOS可执行文件未找到"
+          cp PD-Signal-macOS-*/release/PD-Signal-macOS/* release-files/ 2>/dev/null || echo "macOS发布包未找到"
+        fi
+        
+        echo "=== 准备发布的文件 ==="
+        ls -la release-files/
+      
     - name: 创建发布
       uses: softprops/action-gh-release@v1
       with:
-        files: |
-          PD-Signal-Windows-*/dist/PD-Signal.exe
-          PD-Signal-Windows-*/release/PD-Signal-Windows/*
-          PD-Signal-Linux-*/dist/PD-Signal
-          PD-Signal-Linux-*/release/PD-Signal-Linux/*
-          PD-Signal-macOS-*/dist/PD-Signal
-          PD-Signal-macOS-*/release/PD-Signal-macOS/*
+        files: release-files/*
         generate_release_notes: true
         draft: false
         prerelease: false
