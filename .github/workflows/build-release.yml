@@ -57,11 +57,7 @@ jobs:
         Copy-Item -Path "LICENSE" -Destination "release\" -Force
         
         # 创建版本信息文件
-        $versionContent = @"
-PDSignal Windows Release
-Build Date: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
-Git Tag: ${{ github.ref_name }}
-"@
+        $versionContent = "PDSignal Windows Release`nBuild Date: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')`nGit Tag: ${{ github.ref_name }}"
         $versionContent | Out-File -FilePath "release\VERSION.txt" -Encoding UTF8
         
         # 创建ZIP压缩包
