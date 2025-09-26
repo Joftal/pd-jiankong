@@ -30,6 +30,7 @@ pyinstaller --name="PDSignal" ^
   --specpath="." ^
   --add-data="sql;sql" ^
   --add-data="usersetting.json;." ^
+  --add-data="pandatv.ico;." ^
   --hidden-import="flet" ^
   --hidden-import="plyer" ^
   --hidden-import="requests" ^
