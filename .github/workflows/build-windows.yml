@@ -1,0 +1,139 @@
+name: 构建Windows可执行文件
+
+on:
+  push:
+    branches: [ main, master, Cookie ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:  # 允许手动触发
+
+env:
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v4
+      
+    - name: 设置Python环境
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
+        
+    - name: 安装系统依赖
+      run: |
+        # 安装Windows构建工具
+        python -m pip install --upgrade pip
+        python -m pip install wheel setuptools
+        
+    - name: 安装Python依赖
+      run: |
+        python -m pip install -r requirements.txt
+        python -m pip install pyinstaller
+        
+    - name: 验证依赖安装
+      run: |
+        python -c "import flet; print('Flet版本:', flet.__version__)"
+        python -c "import requests; print('Requests版本:', requests.__version__)"
+        python -c "import plyer; print('Plyer已安装')"
+        pyinstaller --version
+        
+    - name: 清理旧的构建文件
+      run: |
+        if (Test-Path "build") { Remove-Item -Recurse -Force "build" }
+        if (Test-Path "dist") { Remove-Item -Recurse -Force "dist" }
+        if (Test-Path "*.spec") { Remove-Item -Force "*.spec" }
+        
+    - name: 构建可执行文件
+      run: |
+        python build.py
+        
+    - name: 验证构建结果
+      run: |
+        if (Test-Path "dist\PD-Signal.exe") {
+          Write-Host "✅ 可执行文件构建成功"
+          $fileSize = (Get-Item "dist\PD-Signal.exe").Length / 1MB
+          Write-Host "文件大小: $([math]::Round($fileSize, 2)) MB"
+        } else {
+          Write-Host "❌ 可执行文件构建失败"
+          exit 1
+        }
+        
+    - name: 创建发布包
+      run: |
+        # 创建发布目录
+        if (-not (Test-Path "release")) { New-Item -ItemType Directory "release" }
+        if (Test-Path "release\PD-Signal") { Remove-Item -Recurse -Force "release\PD-Signal" }
+        New-Item -ItemType Directory "release\PD-Signal"
+        
+        # 复制可执行文件
+        Copy-Item "dist\PD-Signal.exe" "release\PD-Signal\"
+        Copy-Item "dist\启动PD-Signal.bat" "release\PD-Signal\"
+        Copy-Item "dist\使用说明.txt" "release\PD-Signal\"
+        
+        # 复制源码
+        New-Item -ItemType Directory "release\PD-Signal\source"
+        Copy-Item "*.py" "release\PD-Signal\source\"
+        Copy-Item "requirements.txt" "release\PD-Signal\source\"
+        Copy-Item "README_CN.md" "release\PD-Signal\source\"
+        Copy-Item "project_overview.md" "release\PD-Signal\source\"
+        
+        # 创建版本信息文件
+        $versionInfo = @"
+PD Signal - PandaLive监控工具
+版本: 1.0.0
+构建时间: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
+构建环境: GitHub Actions
+Python版本: ${{ env.PYTHON_VERSION }}
+"@
+        $versionInfo | Out-File -FilePath "release\PD-Signal\版本信息.txt" -Encoding UTF8
+        
+    - name: 上传构建产物
+      uses: actions/upload-artifact@v4
+      with:
+        name: PD-Signal-Windows-${{ github.run_number }}
+        path: |
+          dist/
+          release/
+        retention-days: 30
+        
+    - name: 创建发布 (仅标签推送时)
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          dist/PD-Signal.exe
+          dist/启动PD-Signal.bat
+          dist/使用说明.txt
+          release/PD-Signal/版本信息.txt
+        generate_release_notes: true
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: 输出构建信息
+      run: |
+        Write-Host "=========================================="
+        Write-Host "🎉 构建完成！"
+        Write-Host "=========================================="
+        Write-Host "📁 构建产物:"
+        Get-ChildItem "dist" | ForEach-Object {
+          $size = $_.Length / 1MB
+          Write-Host "   - $($_.Name) ($([math]::Round($size, 2)) MB)"
+        }
+        Write-Host ""
+        Write-Host "📦 发布包:"
+        Get-ChildItem "release\PD-Signal" | ForEach-Object {
+          Write-Host "   - $($_.Name)"
+        }
+        Write-Host ""
+        Write-Host "💡 使用说明:"
+        Write-Host "   1. 下载 PD-Signal.exe 运行程序"
+        Write-Host "   2. 使用 启动PD-Signal.bat 可查看控制台输出"
+        Write-Host "   3. 阅读 使用说明.txt 了解详细用法"

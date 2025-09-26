@@ -1,0 +1,327 @@
+name: 多平台构建和发布
+
+on:
+  push:
+    branches: [ main, master, Cookie ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: '选择构建平台'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+        - all
+        - windows
+        - linux
+        - macos
+
+env:
+  PYTHON_VERSION: '3.11'
+  BUILD_VERSION: ${{ github.ref_name || 'dev' }}
+
+jobs:
+  build-windows:
+    if: github.event.inputs.platform == 'all' || github.event.inputs.platform == 'windows' || github.event.inputs.platform == ''
+    runs-on: windows-latest
+    
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v4
+      
+    - name: 设置Python环境
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
+        
+    - name: 缓存pip依赖
+      uses: actions/cache@v3
+      with:
+        path: ~\AppData\Local\pip\Cache
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+          
+    - name: 安装构建依赖
+      run: |
+        python -m pip install --upgrade pip wheel setuptools
+        python -m pip install -r requirements.txt
+        python -m pip install pyinstaller
+        
+    - name: 验证环境
+      run: |
+        python --version
+        python -c "import sys; print('Python路径:', sys.executable)"
+        pyinstaller --version
+        
+    - name: 清理构建环境
+      run: |
+        if (Test-Path "build") { Remove-Item -Recurse -Force "build" }
+        if (Test-Path "dist") { Remove-Item -Recurse -Force "dist" }
+        if (Test-Path "*.spec") { Remove-Item -Force "*.spec" }
+        
+    - name: 构建Windows可执行文件
+      run: |
+        Write-Host "开始构建Windows版本..."
+        python build.py
+        
+    - name: 验证构建结果
+      run: |
+        if (Test-Path "dist\PD-Signal.exe") {
+          Write-Host "✅ Windows可执行文件构建成功"
+          $fileSize = (Get-Item "dist\PD-Signal.exe").Length / 1MB
+          Write-Host "文件大小: $([math]::Round($fileSize, 2)) MB"
+          
+          # 检查文件是否可执行
+          $fileInfo = Get-Item "dist\PD-Signal.exe"
+          Write-Host "文件版本: $($fileInfo.VersionInfo.FileVersion)"
+        } else {
+          Write-Host "❌ Windows可执行文件构建失败"
+          exit 1
+        }
+        
+    - name: 创建Windows发布包
+      run: |
+        # 创建发布目录
+        $releaseDir = "release\PD-Signal-Windows"
+        if (Test-Path $releaseDir) { Remove-Item -Recurse -Force $releaseDir }
+        New-Item -ItemType Directory $releaseDir
+        
+        # 复制主要文件
+        Copy-Item "dist\PD-Signal.exe" "$releaseDir\"
+        Copy-Item "dist\启动PD-Signal.bat" "$releaseDir\"
+        Copy-Item "dist\使用说明.txt" "$releaseDir\"
+        
+        # 复制源码和文档
+        New-Item -ItemType Directory "$releaseDir\source"
+        Copy-Item "*.py" "$releaseDir\source\"
+        Copy-Item "requirements.txt" "$releaseDir\source\"
+        Copy-Item "README_CN.md" "$releaseDir\source\"
+        Copy-Item "project_overview.md" "$releaseDir\source\"
+        
+        # 创建版本信息
+        $versionInfo = @"
+PD Signal - PandaLive监控工具 (Windows版)
+版本: ${{ env.BUILD_VERSION }}
+构建时间: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
+构建环境: GitHub Actions Windows
+Python版本: ${{ env.PYTHON_VERSION }}
+Git提交: ${{ github.sha }}
+"@
+        $versionInfo | Out-File -FilePath "$releaseDir\版本信息.txt" -Encoding UTF8
+        
+        # 创建安装说明
+        $installGuide = @"
+# PD Signal Windows版安装说明
+
+## 系统要求
+- Windows 10/11 (64位)
+- 无需安装Python或其他依赖
+
+## 安装步骤
+1. 下载 PD-Signal.exe
+2. 双击运行即可
+3. 首次使用请设置PandaLive Cookie
+
+## 使用说明
+- 详细说明请查看"使用说明.txt"
+- 如有问题可查看"版本信息.txt"
+
+## 技术支持
+- GitHub: ${{ github.repository }}
+- 提交: ${{ github.sha }}
+"@
+        $installGuide | Out-File -FilePath "$releaseDir\安装说明.md" -Encoding UTF8
+        
+    - name: 上传Windows构建产物
+      uses: actions/upload-artifact@v4
+      with:
+        name: PD-Signal-Windows-${{ github.run_number }}
+        path: |
+          dist/
+          release/PD-Signal-Windows/
+        retention-days: 30
+
+  build-linux:
+    if: github.event.inputs.platform == 'all' || github.event.inputs.platform == 'linux'
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v4
+      
+    - name: 设置Python环境
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
+        
+    - name: 安装系统依赖
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential libssl-dev libffi-dev python3-dev
+        
+    - name: 安装Python依赖
+      run: |
+        python -m pip install --upgrade pip wheel setuptools
+        python -m pip install -r requirements.txt
+        python -m pip install pyinstaller
+        
+    - name: 构建Linux可执行文件
+      run: |
+        echo "开始构建Linux版本..."
+        pyinstaller --onefile --name=PD-Signal --distpath=dist --workpath=build --clean main.py
+        
+    - name: 验证Linux构建结果
+      run: |
+        if [ -f "dist/PD-Signal" ]; then
+          echo "✅ Linux可执行文件构建成功"
+          ls -lh dist/PD-Signal
+          file dist/PD-Signal
+        else
+          echo "❌ Linux可执行文件构建失败"
+          exit 1
+        fi
+        
+    - name: 创建Linux发布包
+      run: |
+        mkdir -p release/PD-Signal-Linux
+        cp dist/PD-Signal release/PD-Signal-Linux/
+        cp *.py release/PD-Signal-Linux/source/ 2>/dev/null || true
+        cp requirements.txt release/PD-Signal-Linux/source/
+        cp README_CN.md release/PD-Signal-Linux/source/
+        
+        cat > release/PD-Signal-Linux/版本信息.txt << EOF
+PD Signal - PandaLive监控工具 (Linux版)
+版本: ${{ env.BUILD_VERSION }}
+构建时间: $(date '+%Y-%m-%d %H:%M:%S')
+构建环境: GitHub Actions Ubuntu
+Python版本: ${{ env.PYTHON_VERSION }}
+Git提交: ${{ github.sha }}
+EOF
+        
+    - name: 上传Linux构建产物
+      uses: actions/upload-artifact@v4
+      with:
+        name: PD-Signal-Linux-${{ github.run_number }}
+        path: |
+          dist/
+          release/PD-Signal-Linux/
+        retention-days: 30
+
+  build-macos:
+    if: github.event.inputs.platform == 'all' || github.event.inputs.platform == 'macos'
+    runs-on: macos-latest
+    
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v4
+      
+    - name: 设置Python环境
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
+        
+    - name: 安装Python依赖
+      run: |
+        python -m pip install --upgrade pip wheel setuptools
+        python -m pip install -r requirements.txt
+        python -m pip install pyinstaller
+        
+    - name: 构建macOS可执行文件
+      run: |
+        echo "开始构建macOS版本..."
+        pyinstaller --onefile --name=PD-Signal --distpath=dist --workpath=build --clean main.py
+        
+    - name: 验证macOS构建结果
+      run: |
+        if [ -f "dist/PD-Signal" ]; then
+          echo "✅ macOS可执行文件构建成功"
+          ls -lh dist/PD-Signal
+          file dist/PD-Signal
+        else
+          echo "❌ macOS可执行文件构建失败"
+          exit 1
+        fi
+        
+    - name: 创建macOS发布包
+      run: |
+        mkdir -p release/PD-Signal-macOS
+        cp dist/PD-Signal release/PD-Signal-macOS/
+        cp *.py release/PD-Signal-macOS/source/ 2>/dev/null || true
+        cp requirements.txt release/PD-Signal-macOS/source/
+        cp README_CN.md release/PD-Signal-macOS/source/
+        
+        cat > release/PD-Signal-macOS/版本信息.txt << EOF
+PD Signal - PandaLive监控工具 (macOS版)
+版本: ${{ env.BUILD_VERSION }}
+构建时间: $(date '+%Y-%m-%d %H:%M:%S')
+构建环境: GitHub Actions macOS
+Python版本: ${{ env.PYTHON_VERSION }}
+Git提交: ${{ github.sha }}
+EOF
+        
+    - name: 上传macOS构建产物
+      uses: actions/upload-artifact@v4
+      with:
+        name: PD-Signal-macOS-${{ github.run_number }}
+        path: |
+          dist/
+          release/PD-Signal-macOS/
+        retention-days: 30
+
+  create-release:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: [build-windows, build-linux, build-macos]
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 下载所有构建产物
+      uses: actions/download-artifact@v4
+      
+    - name: 创建发布
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          PD-Signal-Windows-*/dist/PD-Signal.exe
+          PD-Signal-Windows-*/release/PD-Signal-Windows/*
+          PD-Signal-Linux-*/dist/PD-Signal
+          PD-Signal-Linux-*/release/PD-Signal-Linux/*
+          PD-Signal-macOS-*/dist/PD-Signal
+          PD-Signal-macOS-*/release/PD-Signal-macOS/*
+        generate_release_notes: true
+        draft: false
+        prerelease: false
+        body: |
+          ## PD Signal v${{ github.ref_name }}
+          
+          ### 下载说明
+          - **Windows用户**: 下载 `PD-Signal.exe` 直接运行
+          - **Linux用户**: 下载 `PD-Signal` 并添加执行权限 (`chmod +x PD-Signal`)
+          - **macOS用户**: 下载 `PD-Signal` 并添加执行权限 (`chmod +x PD-Signal`)
+          
+          ### 功能特点
+          - ✅ 多主播监控
+          - ✅ 实时通知
+          - ✅ 跨平台支持
+          - ✅ 现代化GUI界面
+          
+          ### 使用说明
+          详细使用说明请查看各平台发布包中的说明文档。
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: 输出发布信息
+      run: |
+        echo "=========================================="
+        echo "🎉 发布完成！"
+        echo "=========================================="
+        echo "版本: ${{ github.ref_name }}"
+        echo "提交: ${{ github.sha }}"
+        echo "平台: Windows, Linux, macOS"
+        echo "=========================================="

@@ -1,0 +1,88 @@
+name: Windows构建测试
+
+on:
+  push:
+    branches: [ Cookie, test ]
+  pull_request:
+    branches: [ Cookie ]
+  workflow_dispatch:
+
+env:
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  test-and-build:
+    runs-on: windows-latest
+    
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v4
+      
+    - name: 设置Python环境
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: 安装依赖
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install -r requirements.txt
+        python -m pip install pyinstaller pytest
+        
+    - name: 运行基础测试
+      run: |
+        # 测试Python模块导入
+        python -c "import main; print('✅ main模块导入成功')"
+        python -c "import database_manager; print('✅ database_manager模块导入成功')"
+        python -c "import notification_manager; print('✅ notification_manager模块导入成功')"
+        python -c "import panda_monitor; print('✅ panda_monitor模块导入成功')"
+        python -c "import config; print('✅ config模块导入成功')"
+        
+        # 测试依赖库
+        python -c "import flet; print('✅ Flet版本:', flet.__version__)"
+        python -c "import requests; print('✅ Requests版本:', requests.__version__)"
+        python -c "import plyer; print('✅ Plyer已安装')"
+        
+    - name: 清理构建环境
+      run: |
+        if (Test-Path "build") { Remove-Item -Recurse -Force "build" }
+        if (Test-Path "dist") { Remove-Item -Recurse -Force "dist" }
+        if (Test-Path "*.spec") { Remove-Item -Force "*.spec" }
+        
+    - name: 构建可执行文件
+      run: |
+        Write-Host "开始构建..."
+        python build.py
+        
+    - name: 验证构建结果
+      run: |
+        if (Test-Path "dist\PD-Signal.exe") {
+          Write-Host "✅ 构建成功！"
+          $fileSize = (Get-Item "dist\PD-Signal.exe").Length / 1MB
+          Write-Host "文件大小: $([math]::Round($fileSize, 2)) MB"
+          
+          # 检查文件信息
+          $fileInfo = Get-Item "dist\PD-Signal.exe"
+          Write-Host "创建时间: $($fileInfo.CreationTime)"
+          Write-Host "修改时间: $($fileInfo.LastWriteTime)"
+        } else {
+          Write-Host "❌ 构建失败"
+          exit 1
+        }
+        
+    - name: 上传构建产物
+      uses: actions/upload-artifact@v4
+      with:
+        name: PD-Signal-Test-Build-${{ github.run_number }}
+        path: dist/
+        retention-days: 7
+        
+    - name: 输出构建信息
+      run: |
+        Write-Host "=========================================="
+        Write-Host "🎉 测试构建完成！"
+        Write-Host "=========================================="
+        Write-Host "分支: ${{ github.ref_name }}"
+        Write-Host "提交: ${{ github.sha }}"
+        Write-Host "Python版本: ${{ env.PYTHON_VERSION }}"
+        Write-Host "=========================================="

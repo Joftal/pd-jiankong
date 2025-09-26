@@ -1,0 +1,159 @@
+# ===========================================
+# PD Signal 项目 .gitignore 文件
+# ===========================================
+
+# Python 相关文件
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller 构建文件
+*.manifest
+*.spec
+
+# Python 测试和覆盖率
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
+# Python 环境
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.python-version
+
+# 项目特定文件
+# 数据库文件（包含用户数据，不应提交）
+*.db
+*.sqlite
+*.sqlite3
+pd_signal.db
+
+# 日志文件
+*.log
+log.txt
+
+# 构建产物
+build/
+dist/
+*.exe
+*.app
+*.dmg
+*.pkg
+
+# 发布包
+release/
+
+# 临时文件
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+*~
+
+# IDE 和编辑器
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+.DS_Store
+Thumbs.db
+
+# Windows 系统文件
+*.lnk
+desktop.ini
+ehthumbs.db
+Thumbs.db
+
+# macOS 系统文件
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+
+# Node.js 相关（如果使用）
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.yarn-integrity
+
+# 压缩文件
+*.zip
+*.rar
+*.7z
+*.tar.gz
+*.tar.bz2
+
+# 其他临时文件
+*.pid
+*.seed
+*.pid.lock
+
+# ===========================================
+# 项目特定忽略规则
+# ===========================================
+
+# 用户配置文件（如果包含敏感信息）
+# config.json
+# settings.json
+# user_config.ini
+
+# 缓存目录
+# cache/
+# temp/
+
+# 备份目录
+# backup/
+
+# 测试输出
+# test_output/
+# test_results/
+
+# 文档构建
+# docs/build/
+# docs/_build/
+
+# ===========================================
+# 注意事项
+# ===========================================
+# 1. 数据库文件 (pd_signal.db) 被忽略，因为包含用户数据
+# 2. 构建产物 (build/, dist/) 被忽略，因为可以通过 GitHub Actions 重新构建
+# 3. 日志文件被忽略，避免提交大量日志数据
+# 4. 如果需要提交某些被忽略的文件，可以使用 git add -f 强制添加
