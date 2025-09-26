@@ -107,37 +107,11 @@ jobs:
         Copy-Item "project_overview.md" "$releaseDir\source\"
         
         # 创建版本信息
-        $versionInfo = @"
-PD Signal - PandaLive监控工具 (Windows版)
-版本: ${{ env.BUILD_VERSION }}
-构建时间: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
-构建环境: GitHub Actions Windows
-Python版本: ${{ env.PYTHON_VERSION }}
-Git提交: ${{ github.sha }}
-"@
+        $versionInfo = "PD Signal - PandaLive监控工具 (Windows版)`n版本: ${{ env.BUILD_VERSION }}`n构建时间: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')`n构建环境: GitHub Actions Windows`nPython版本: ${{ env.PYTHON_VERSION }}`nGit提交: ${{ github.sha }}"
         $versionInfo | Out-File -FilePath "$releaseDir\版本信息.txt" -Encoding UTF8
         
         # 创建安装说明
-        $installGuide = @"
-# PD Signal Windows版安装说明
-
-## 系统要求
-- Windows 10/11 (64位)
-- 无需安装Python或其他依赖
-
-## 安装步骤
-1. 下载 PD-Signal.exe
-2. 双击运行即可
-3. 首次使用请设置PandaLive Cookie
-
-## 使用说明
-- 详细说明请查看"使用说明.txt"
-- 如有问题可查看"版本信息.txt"
-
-## 技术支持
-- GitHub: ${{ github.repository }}
-- 提交: ${{ github.sha }}
-"@
+        $installGuide = "# PD Signal Windows版安装说明`n`n## 系统要求`n- Windows 10/11 (64位)`n- 无需安装Python或其他依赖`n`n## 安装步骤`n1. 下载 PD-Signal.exe`n2. 双击运行即可`n3. 首次使用请设置PandaLive Cookie`n`n## 使用说明`n- 详细说明请查看`"使用说明.txt`"`n- 如有问题可查看`"版本信息.txt`"`n`n## 技术支持`n- GitHub: ${{ github.repository }}`n- 提交: ${{ github.sha }}"
         $installGuide | Out-File -FilePath "$releaseDir\安装说明.md" -Encoding UTF8
         
     - name: 上传Windows构建产物
@@ -198,14 +172,12 @@ Git提交: ${{ github.sha }}
         cp requirements.txt release/PD-Signal-Linux/source/
         cp README_CN.md release/PD-Signal-Linux/source/
         
-        cat > release/PD-Signal-Linux/版本信息.txt << EOF
-PD Signal - PandaLive监控工具 (Linux版)
-版本: ${{ env.BUILD_VERSION }}
-构建时间: $(date '+%Y-%m-%d %H:%M:%S')
-构建环境: GitHub Actions Ubuntu
-Python版本: ${{ env.PYTHON_VERSION }}
-Git提交: ${{ github.sha }}
-EOF
+        echo "PD Signal - PandaLive监控工具 (Linux版)" > release/PD-Signal-Linux/版本信息.txt
+        echo "版本: ${{ env.BUILD_VERSION }}" >> release/PD-Signal-Linux/版本信息.txt
+        echo "构建时间: $(date '+%Y-%m-%d %H:%M:%S')" >> release/PD-Signal-Linux/版本信息.txt
+        echo "构建环境: GitHub Actions Ubuntu" >> release/PD-Signal-Linux/版本信息.txt
+        echo "Python版本: ${{ env.PYTHON_VERSION }}" >> release/PD-Signal-Linux/版本信息.txt
+        echo "Git提交: ${{ github.sha }}" >> release/PD-Signal-Linux/版本信息.txt
         
     - name: 上传Linux构建产物
       uses: actions/upload-artifact@v4
@@ -260,14 +232,12 @@ EOF
         cp requirements.txt release/PD-Signal-macOS/source/
         cp README_CN.md release/PD-Signal-macOS/source/
         
-        cat > release/PD-Signal-macOS/版本信息.txt << EOF
-PD Signal - PandaLive监控工具 (macOS版)
-版本: ${{ env.BUILD_VERSION }}
-构建时间: $(date '+%Y-%m-%d %H:%M:%S')
-构建环境: GitHub Actions macOS
-Python版本: ${{ env.PYTHON_VERSION }}
-Git提交: ${{ github.sha }}
-EOF
+        echo "PD Signal - PandaLive监控工具 (macOS版)" > release/PD-Signal-macOS/版本信息.txt
+        echo "版本: ${{ env.BUILD_VERSION }}" >> release/PD-Signal-macOS/版本信息.txt
+        echo "构建时间: $(date '+%Y-%m-%d %H:%M:%S')" >> release/PD-Signal-macOS/版本信息.txt
+        echo "构建环境: GitHub Actions macOS" >> release/PD-Signal-macOS/版本信息.txt
+        echo "Python版本: ${{ env.PYTHON_VERSION }}" >> release/PD-Signal-macOS/版本信息.txt
+        echo "Git提交: ${{ github.sha }}" >> release/PD-Signal-macOS/版本信息.txt
         
     - name: 上传macOS构建产物
       uses: actions/upload-artifact@v4
