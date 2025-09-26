@@ -1,12 +1,26 @@
 import sqlite3
 import os
+import sys
 from pathlib import Path
 from typing import List, Dict, Optional, Tuple
 
 class DatabaseManager:
     def __init__(self, db_path: str = "pd_signal.db"):
         """初始化数据库管理器"""
-        self.db_path = db_path
+        # 获取可执行文件所在目录
+        if getattr(sys, 'frozen', False):
+            # PyInstaller打包后的路径
+            app_dir = os.path.dirname(sys.executable)
+        else:
+            # 开发环境路径
+            app_dir = os.path.dirname(__file__)
+        
+        # 确保数据库文件在可执行文件所在目录
+        if not os.path.isabs(db_path):
+            self.db_path = os.path.join(app_dir, db_path)
+        else:
+            self.db_path = db_path
+            
         self.init_database()
     
     def init_database(self):

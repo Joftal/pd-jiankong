@@ -83,7 +83,6 @@ jobs:
         
         # 复制主要文件
         Copy-Item "dist\PD-Signal.exe" "$releaseDir\"
-        Copy-Item "dist\启动PD-Signal.bat" "$releaseDir\"
         Copy-Item "dist\使用说明.txt" "$releaseDir\"
         
         # 复制源码和文档
@@ -103,7 +102,6 @@ jobs:
       with:
         files: |
           dist/PD-Signal.exe
-          dist/启动PD-Signal.bat
           dist/使用说明.txt
           release/PD-Signal-Windows/版本信息.txt
         generate_release_notes: true
@@ -114,7 +112,6 @@ jobs:
           
           ### 📥 下载说明
           - **Windows用户**: 下载 `PD-Signal.exe` 直接运行
-          - 使用 `启动PD-Signal.bat` 可以看到控制台输出
           - 详细说明请查看 `使用说明.txt`
           
           ### 🎯 功能特点
@@ -154,6 +151,5 @@ jobs:
         Write-Output ""
         Write-Output "💡 使用说明:"
         Write-Output "   1. 下载 PD-Signal.exe 运行程序"
-        Write-Output "   2. 使用 启动PD-Signal.bat 可查看控制台输出"
-        Write-Output "   3. 阅读 使用说明.txt 了解详细用法"
+        Write-Output "   2. 阅读 使用说明.txt 了解详细用法"
         Write-Output "=========================================="

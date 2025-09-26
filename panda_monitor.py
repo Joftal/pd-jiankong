@@ -4,6 +4,7 @@ import time
 import requests
 import logging
 import os
+import sys
 from datetime import datetime
 from typing import List, Dict, Optional, Callable
 import threading
@@ -36,8 +37,16 @@ class PandaLiveMonitor:
         
         # 避免重复添加handler
         if not self.logger.handlers:
+            # 获取可执行文件所在目录
+            if getattr(sys, 'frozen', False):
+                # PyInstaller打包后的路径
+                app_dir = os.path.dirname(sys.executable)
+            else:
+                # 开发环境路径
+                app_dir = os.path.dirname(__file__)
+            
             # 创建文件handler
-            log_file = os.path.join(os.path.dirname(__file__), 'log.txt')
+            log_file = os.path.join(app_dir, 'log.txt')
             file_handler = logging.FileHandler(log_file, encoding='utf-8')
             file_handler.setLevel(logging.INFO)
             
@@ -59,7 +68,7 @@ class PandaLiveMonitor:
             self.logger.addHandler(file_handler)
             self.logger.addHandler(console_handler)
         
-        self.logger.info("PandaLiveMonitor logger 初始化完成")
+        self.logger.info(f"PandaLiveMonitor logger 初始化完成，日志文件: {log_file}")
         
     def set_cookie(self, cookie: str):
         """设置Cookie"""

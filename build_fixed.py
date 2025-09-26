@@ -189,6 +189,7 @@ def create_readme():
 - 需要有效的PandaLive Cookie才能正常工作
 - 建议设置合理的检测间隔，避免请求过于频繁
 - 程序会自动保存配置和监控列表
+- 日志文件会自动在程序目录创建
 
 ## 技术支持
 
@@ -196,6 +197,7 @@ def create_readme():
 1. Cookie是否有效
 2. 网络连接是否正常
 3. 主播ID是否正确
+4. 查看程序目录下的log.txt文件获取详细日志
 
 版本: 1.0.0 (修复版)
 构建时间: {build_time}
@@ -228,7 +230,6 @@ def main():
         sys.exit(1)
     
     # 创建额外文件
-    create_installer()
     create_readme()
     
     print("\n" + "=" * 50)
@@ -243,7 +244,6 @@ def main():
     
     print("\n[TIP] 提示:")
     print("   - 运行 PD-Signal.exe 启动程序")
-    print("   - 使用 启动PD-Signal.bat 可以看到控制台输出")
     print("   - 阅读 使用说明.txt 了解详细使用方法")
     print("   - 此版本已修复无限循环创建进程的问题")
 
