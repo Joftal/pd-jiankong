@@ -96,10 +96,20 @@ class PandaLiveMonitor:
     
     def set_proxy(self, enabled: bool, proxy_url: str = ""):
         """设置代理"""
+        old_enabled = self.proxy_enabled
+        old_url = self.proxy_url
+        
         self.proxy_enabled = enabled
         self.proxy_url = proxy_url.strip()
         self.db.set_config("proxy_enabled", "true" if enabled else "false")
         self.db.set_config("proxy_url", self.proxy_url)
+        
+        # 记录代理设置变更
+        if old_enabled != enabled or old_url != self.proxy_url:
+            if enabled and self.proxy_url:
+                self._notify_status_change(f"[PROXY] 代理设置已更新: 启用代理 {self.proxy_url}")
+            else:
+                self._notify_status_change("[PROXY] 代理设置已更新: 禁用代理，使用直连")
     
     def get_proxy_config(self) -> dict:
         """获取代理配置"""
@@ -146,7 +156,9 @@ class PandaLiveMonitor:
             # 获取代理配置
             proxies = self.get_proxy_config()
             if proxies:
-                self._notify_status_change(f"[PROXY] 使用代理: {self.proxy_url}")
+                self._notify_status_change(f"[PROXY] 使用代理请求API: {self.proxy_url}")
+            else:
+                self._notify_status_change("[PROXY] 使用直连请求API")
             
             response = requests.get(url, params=params, headers=headers, proxies=proxies, timeout=5)
             response.raise_for_status()
@@ -187,7 +199,9 @@ class PandaLiveMonitor:
             # 获取代理配置
             proxies = self.get_proxy_config()
             if proxies:
-                self._notify_status_change(f"[PROXY] 使用代理: {self.proxy_url}")
+                self._notify_status_change(f"[PROXY] 使用代理请求主播信息: {self.proxy_url}")
+            else:
+                self._notify_status_change("[PROXY] 使用直连请求主播信息")
             
             response = requests.post(url, data=data, headers=headers, proxies=proxies, timeout=5)
             response.raise_for_status()
@@ -380,6 +394,12 @@ class PandaLiveMonitor:
         
         self._notify_status_change("[START] 正在启动监控系统...")
         self._notify_status_change(f"[SETTINGS] 监控配置: 检测间隔={self.check_interval}秒, 主循环间隔={self.main_interval}秒, 主播间间隔={self.streamer_interval}秒")
+        
+        # 记录代理使用状态
+        if self.proxy_enabled and self.proxy_url:
+            self._notify_status_change(f"[PROXY] 代理已启用: {self.proxy_url}")
+        else:
+            self._notify_status_change("[PROXY] 代理未启用，使用直连")
         
         self.is_running = True
         self.monitor_thread = threading.Thread(target=self._monitoring_loop, daemon=True)

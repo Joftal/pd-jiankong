@@ -44,7 +44,7 @@ class PDSignalApp:
         # 状态
         self.log_messages = []
         self.max_log_messages = 100
-        self.is_dark_theme = True  # 默认暗色主题
+        self.is_dark_theme = False  # 默认暗色主题
         self.window_height = 900  # 默认窗口高度
         
         # 设置监控状态回调
@@ -1180,9 +1180,9 @@ class PDSignalApp:
         proxy_status = self.monitor.get_monitoring_status()
         if proxy_status.get('proxy_enabled'):
             proxy_url = proxy_status.get('proxy_url', '')
-            self.add_log_message(f"[PROXY] 代理已启用: {proxy_url}")
+            self.add_log_message(f"[PROXY] 当前代理状态: 已启用 ({proxy_url})")
         else:
-            self.add_log_message("[PROXY] 代理未启用")
+            self.add_log_message("[PROXY] 当前代理状态: 未启用，使用直连")
         
         # 检查监控列表
         watched_count = len(self.db.get_all_watched_vtbs())
