@@ -46,9 +46,14 @@ class PDSignalApp:
         self.max_log_messages = 100
         self.is_dark_theme = False  # 默认暗色主题
         self.window_height = 900  # 默认窗口高度
+        self.last_streamer_count = 0  # 记录上次的主播数量
+        self.last_online_count = 0  # 记录上次的在线数量
         
         # 设置监控状态回调
         self.monitor.add_status_callback(self.on_monitor_status_change)
+        
+        # 初始化通知设置
+        self._load_notification_settings()
     
     def _setup_logger(self):
         """配置logger"""
@@ -91,6 +96,21 @@ class PDSignalApp:
         
         self.logger.info(f"PDSignalApp logger 初始化完成，日志文件: {log_file}")
     
+    def _load_notification_settings(self):
+        """加载通知设置"""
+        try:
+            online_notification = self.db.get_config("online_notification", "true").lower() == "true"
+            offline_notification = self.db.get_config("offline_notification", "true").lower() == "true"
+            
+            # 设置通知管理器
+            self.notifier.set_notification_settings(online_notification, offline_notification)
+            
+            self.logger.info(f"通知设置已加载: 在线通知={'启用' if online_notification else '禁用'}, 离线通知={'启用' if offline_notification else '禁用'}")
+        except Exception as e:
+            self.logger.error(f"加载通知设置失败: {e}")
+            # 使用默认设置
+            self.notifier.set_notification_settings(True, True)
+    
     def on_monitor_status_change(self, message: str):
         """监控状态变化回调"""
         if self.page:
@@ -102,10 +122,16 @@ class PDSignalApp:
             if len(self.log_messages) > self.max_log_messages:
                 self.log_messages.pop(0)
             
-            # 更新UI
+            # 更新日志显示
             self.update_log_display()
+            
+            # 只在特定消息时更新主播列表，避免频繁刷新
+            if any(keyword in message for keyword in ["[ONLINE]", "[OFFLINE]", "[UPDATE]", "[START]", "[STOP]"]):
+                self.update_streamer_list()
+            
+            # 更新状态显示
             self.update_status_display()
-            self.update_streamer_list()  # 添加这行来更新主播列表
+            
             self.page.update()
     
     def add_log_message(self, message: str):
@@ -158,6 +184,7 @@ class PDSignalApp:
         """更新主播列表"""
         self.logger.info(f"更新主播列表: 监控状态={self.monitor.is_running}")
         
+        # 强制从数据库重新获取最新数据
         watched_vtbs = self.db.get_all_watched_vtbs()
         self.logger.info(f"获取到 {len(watched_vtbs)} 个监控主播")
         
@@ -171,16 +198,30 @@ class PDSignalApp:
         if not self.monitor.is_running:
             self.logger.info("监控未运行，清空在线/离线列表")
             self._clear_online_offline_lists()
+            self.last_streamer_count = 0
+            self.last_online_count = 0
             return
         
         if not watched_vtbs:
             self.logger.info("没有监控主播，清空在线/离线列表")
             self._clear_online_offline_lists()
+            self.last_streamer_count = 0
+            self.last_online_count = 0
             return
         
         # 分离在线和离线主播
         online_vtbs = [vtb for vtb in watched_vtbs if vtb['liveStatus']]
         offline_vtbs = [vtb for vtb in watched_vtbs if not vtb['liveStatus']]
+        
+        current_online_count = len(online_vtbs)
+        current_total_count = len(watched_vtbs)
+        
+        # 检查是否有变化
+        if (current_total_count != self.last_streamer_count or 
+            current_online_count != self.last_online_count):
+            self.logger.info(f"主播状态发生变化: 总数 {self.last_streamer_count}->{current_total_count}, 在线 {self.last_online_count}->{current_online_count}")
+            self.last_streamer_count = current_total_count
+            self.last_online_count = current_online_count
         
         self.logger.info(f"在线主播: {len(online_vtbs)}, 离线主播: {len(offline_vtbs)}")
         
@@ -595,6 +636,28 @@ class PDSignalApp:
             self.add_log_message(f"[ERROR] {error_msg}")
             self.show_snackbar(error_msg, ft.Colors.RED)
     
+    def save_notification_settings(self, e):
+        """保存通知设置"""
+        try:
+            online_notification = self.online_notification_field.value if self.online_notification_field else True
+            offline_notification = self.offline_notification_field.value if self.offline_notification_field else True
+            
+            # 保存到数据库
+            self.db.set_config("online_notification", "true" if online_notification else "false")
+            self.db.set_config("offline_notification", "true" if offline_notification else "false")
+            
+            # 更新通知管理器设置
+            self.notifier.set_notification_settings(online_notification, offline_notification)
+            
+            online_status = "启用" if online_notification else "禁用"
+            offline_status = "启用" if offline_notification else "禁用"
+            self.add_log_message(f"[SETTINGS] 通知设置已保存: 在线通知={online_status}, 离线通知={offline_status}")
+            self.show_snackbar("通知设置已保存", ft.Colors.GREEN)
+        except Exception as ex:
+            error_msg = f"通知设置保存失败: {str(ex)}"
+            self.add_log_message(f"[ERROR] {error_msg}")
+            self.show_snackbar(error_msg, ft.Colors.RED)
+    
     def show_snackbar(self, message: str, color):
         """显示消息条"""
         if self.page:
@@ -649,6 +712,15 @@ class PDSignalApp:
         if self.proxy_url_field:
             saved_proxy_url = self.db.get_config("proxy_url", "")
             self.proxy_url_field.value = saved_proxy_url
+        
+        # 恢复通知设置
+        if self.online_notification_field:
+            saved_online_notification = self.db.get_config("online_notification", "true").lower() == "true"
+            self.online_notification_field.value = saved_online_notification
+        
+        if self.offline_notification_field:
+            saved_offline_notification = self.db.get_config("offline_notification", "true").lower() == "true"
+            self.offline_notification_field.value = saved_offline_notification
         
         # 恢复监控状态
         self.update_status_display()
@@ -709,39 +781,8 @@ class PDSignalApp:
         self.update_log_display()
         self.page.update()
     
-    def check_window_scroll_needed(self):
-        """检查是否需要启用窗口滚动"""
-        if not self.page:
-            return
-        
-        # 获取当前窗口高度
-        current_height = self.page.window.height
-        self.window_height = current_height
-        
-        # 计算左侧配置面板的预估高度
-        # Cookie区域: ~120px
-        # 监控设置区域: ~200px  
-        # 代理设置区域: ~150px
-        # 添加主播区域: ~150px
-        # 总高度约: 620px
-        config_panel_height = 620
-        
-        # 如果窗口高度小于配置面板高度 + 顶部标题栏(80px) + 状态栏(60px) + 底部边距(40px)
-        min_required_height = config_panel_height + 180
-        
-        if current_height < min_required_height:
-            # 启用页面滚动
-            self.page.scroll = ft.ScrollMode.AUTO
-            self.add_log_message(f"[WINDOW] 窗口高度({current_height}px)不足，已启用滚动模式")
-            self.add_log_message(f"[WINDOW] 建议最小高度: {min_required_height}px")
-        else:
-            # 禁用页面滚动
-            self.page.scroll = ft.ScrollMode.HIDDEN
-            self.add_log_message(f"[WINDOW] 窗口高度({current_height}px)充足，已禁用滚动模式")
-    
     def on_window_resize(self, e):
         """窗口大小改变时的回调"""
-        self.check_window_scroll_needed()
         if self.page:
             self.page.update()
     
@@ -780,15 +821,14 @@ class PDSignalApp:
     def on_window_event(self, e):
         """窗口事件处理"""
         if e.data == "close":
-            # 窗口关闭时保存设置（使用print避免UI更新）
+            # 窗口关闭时先停止监控，然后保存设置
             try:
-                self.save_window_settings()
+                self.safe_shutdown()
             except Exception as ex:
-                print(f"保存窗口设置失败: {ex}")
+                print(f"安全关闭失败: {ex}")
         elif e.data == "resize":
-            # 窗口大小改变时检查滚动需求
+            # 窗口大小改变时的处理
             try:
-                self.check_window_scroll_needed()
                 if self.page:
                     self.page.update()
             except Exception as ex:
@@ -929,6 +969,20 @@ class PDSignalApp:
             border_radius=8
         )
         
+        # 通知设置
+        saved_online_notification = self.db.get_config("online_notification", "true").lower() == "true"
+        saved_offline_notification = self.db.get_config("offline_notification", "true").lower() == "true"
+        
+        self.online_notification_field = ft.Checkbox(
+            label="在线主播通知",
+            value=saved_online_notification
+        )
+        
+        self.offline_notification_field = ft.Checkbox(
+            label="离线主播通知",
+            value=saved_offline_notification
+        )
+        
         config_panel = ft.Container(
             content=ft.Column([
                 # Cookie区域
@@ -1013,19 +1067,22 @@ class PDSignalApp:
                     margin=ft.margin.only(bottom=10)
                 ),
                 
-                # 添加主播区域
+                # 通知设置区域
                 ft.Container(
                     content=ft.Column([
-                        ft.Text("➕ 添加主播", size=16, weight=ft.FontWeight.BOLD),
-                        self.streamer_id_field,
-                        self.streamer_remark_field,
-                        ft.ElevatedButton("➕ 添加", on_click=self.add_streamer,
-                                       bgcolor=colors['success'], color=ft.Colors.WHITE,
-                                       height=40)
+                        ft.Text("🔔 通知设置", size=16, weight=ft.FontWeight.BOLD),
+                        self.online_notification_field,
+                        self.offline_notification_field,
+                        ft.ElevatedButton("💾 保存", on_click=self.save_notification_settings,
+                                       bgcolor=colors['primary'], color=ft.Colors.WHITE,
+                                       height=40),
+                        ft.Text("控制是否接收主播上线/下线通知", 
+                               size=11, color=colors['text_secondary'])
                     ], spacing=8),
                     bgcolor=colors['surface'],
                     padding=15,
-                    border_radius=10
+                    border_radius=10,
+                    margin=ft.margin.only(bottom=10)
                 )
             ], spacing=0),
             padding=20,
@@ -1085,6 +1142,22 @@ class PDSignalApp:
                             border=ft.border.all(1, colors['text_secondary'])
                         )
                     ], spacing=0)
+                ),
+                
+                # 添加主播区域
+                ft.Container(
+                    content=ft.Column([
+                        ft.Text("➕ 添加主播", size=16, weight=ft.FontWeight.BOLD),
+                        self.streamer_id_field,
+                        self.streamer_remark_field,
+                        ft.ElevatedButton("➕ 添加", on_click=self.add_streamer,
+                                       bgcolor=colors['success'], color=ft.Colors.WHITE,
+                                       height=40)
+                    ], spacing=8),
+                    bgcolor=colors['surface'],
+                    padding=15,
+                    border_radius=10,
+                    margin=ft.margin.only(top=15)
                 )
             ], spacing=0),
             padding=20,
@@ -1188,9 +1261,6 @@ class PDSignalApp:
         watched_count = len(self.db.get_all_watched_vtbs())
         self.add_log_message(f"[LIST] 当前监控主播数量: {watched_count}")
         
-        # 检查窗口滚动需求
-        self.check_window_scroll_needed()
-        
         page.update()
     
     def run(self):
@@ -1203,11 +1273,11 @@ class PDSignalApp:
         except Exception as e:
             print(f"程序运行出错: {e}")
         finally:
-            # 程序退出时保存窗口设置（使用print避免UI更新）
+            # 程序退出时进行安全关闭
             try:
-                self.save_window_settings()
+                self.safe_shutdown()
             except Exception as e:
-                print(f"保存窗口设置时出错: {e}")
+                print(f"安全关闭时出错: {e}")
     
     def _load_window_settings_before_app(self):
         """在应用创建之前加载窗口设置"""
@@ -1225,6 +1295,27 @@ class PDSignalApp:
             print(f"[ERROR] 预加载窗口设置失败: {e}")
             self._pending_window_width = 1400
             self._pending_window_height = 900
+    
+    def safe_shutdown(self):
+        """安全关闭程序"""
+        try:
+            print("[SHUTDOWN] 开始安全关闭程序...")
+            
+            # 检查监控状态
+            if self.monitor.is_running:
+                print("[SHUTDOWN] 检测到监控正在运行，正在停止监控...")
+                self.monitor.stop_monitoring()
+                print("[SHUTDOWN] 监控已停止")
+            else:
+                print("[SHUTDOWN] 监控未运行，无需停止")
+            
+            # 保存窗口设置
+            self.save_window_settings()
+            print("[SHUTDOWN] 窗口设置已保存")
+            
+            print("[SHUTDOWN] 安全关闭完成")
+        except Exception as e:
+            print(f"[SHUTDOWN] 安全关闭时出错: {e}")
     
     def cleanup(self):
         """清理资源"""
@@ -1336,11 +1427,24 @@ def main():
     
     print("✅ 单实例检查通过，正在启动程序...")
     
+    app = None
     try:
         app = PDSignalApp()
         app.run()
+    except KeyboardInterrupt:
+        print("\n⚠️ 程序被用户中断")
+        if app:
+            try:
+                app.safe_shutdown()
+            except Exception as e:
+                print(f"安全关闭时出错: {e}")
     except Exception as e:
         print(f"❌ 程序启动失败: {e}")
+        if app:
+            try:
+                app.safe_shutdown()
+            except Exception as e:
+                print(f"安全关闭时出错: {e}")
         input("按回车键退出...")
         sys.exit(1)
     finally:

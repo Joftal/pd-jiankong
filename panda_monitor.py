@@ -349,6 +349,7 @@ class PandaLiveMonitor:
         
         # 检查是否有变化
         status_changed = False
+        went_online = False
         
         if usernick != vtb['usernick']:
             self.db.update_vtb_column('usernick', usernick, vtb['mid'])
@@ -361,22 +362,27 @@ class PandaLiveMonitor:
         if start_time != vtb['liveStatus']:
             self.db.update_vtb_column('liveStatus', start_time, vtb['mid'])
             
-            # 发送开播通知
+            # 检查是否从离线变为在线
             if vtb['liveStatus'] == '' or vtb['liveStatus'] is None:
-                # 从离线变为在线
+                went_online = True
+                # 发送开播通知
                 self.notifier.notify_streamer_online(
                     vtb['username'], usernick, full_title, start_time
                 )
+                self._notify_status_change(f"[ONLINE] 主播 {vtb['mid']} 开播了！")
             
             status_changed = True
         
+        # 更新内存中的数据
+        vtb.update({
+            'usernick': usernick,
+            'title': full_title,
+            'liveStatus': start_time
+        })
+        
+        # 如果状态发生变化，通知UI更新
         if status_changed:
-            # 更新内存中的数据
-            vtb.update({
-                'usernick': usernick,
-                'title': full_title,
-                'liveStatus': start_time
-            })
+            self._notify_status_change(f"[UPDATE] 主播 {vtb['mid']} 信息已更新")
     
     async def _process_offline_streamer(self, vtb: Dict):
         """处理离线主播"""
@@ -384,6 +390,7 @@ class PandaLiveMonitor:
             # 从在线变为离线
             self.db.update_vtb_column('liveStatus', '', vtb['mid'])
             self.notifier.notify_streamer_offline(vtb['username'], vtb['usernick'])
+            self._notify_status_change(f"[OFFLINE] 主播 {vtb['mid']} 下播了！")
             vtb['liveStatus'] = ''
     
     def start_monitoring(self):
@@ -417,6 +424,9 @@ class PandaLiveMonitor:
         self._notify_status_change("[STOP] 正在停止监控系统...")
         self.is_running = False
         
+        # 强制将所有主播状态改为离线
+        self._force_all_streamers_offline()
+        
         if self.monitor_thread:
             self.monitor_thread.join(timeout=5)
             if self.monitor_thread.is_alive():
@@ -425,6 +435,34 @@ class PandaLiveMonitor:
                 self._notify_status_change("[OK] 监控线程已安全停止")
         
         self._notify_status_change("[STOP] 监控系统已完全停止")
+    
+    def _force_all_streamers_offline(self):
+        """强制将所有主播状态改为离线"""
+        try:
+            watched_vtbs = self.db.get_all_watched_vtbs()
+            if not watched_vtbs:
+                self._notify_status_change("[OFFLINE] 没有需要设置为离线的主播")
+                return
+            
+            offline_count = 0
+            self._notify_status_change(f"[OFFLINE] 正在强制设置 {len(watched_vtbs)} 个主播为离线状态...")
+            
+            for vtb in watched_vtbs:
+                if vtb['liveStatus'] and vtb['liveStatus'] != '':
+                    # 只有当前在线的才需要设置为离线
+                    self.db.update_vtb_column('liveStatus', '', vtb['mid'])
+                    offline_count += 1
+                    self._notify_status_change(f"[OFFLINE] 主播 {vtb['mid']} 已设置为离线")
+            
+            if offline_count > 0:
+                self._notify_status_change(f"[OK] 已强制设置 {offline_count} 个主播为离线状态")
+            else:
+                self._notify_status_change("[OK] 所有主播已经是离线状态")
+                
+        except Exception as e:
+            error_msg = f"强制设置主播离线状态失败: {str(e)}"
+            self.logger.error(error_msg)
+            self._notify_status_change(f"[ERROR] {error_msg}")
     
     def _monitoring_loop(self):
         """监控主循环"""
