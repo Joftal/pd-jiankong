@@ -191,7 +191,7 @@ jobs:
         cp project_overview.md "release/PD-Signal-Linux/source/"
         
         # 创建版本信息
-        cat > "release/PD-Signal-Linux/版本信息.txt" << EOF
+        cat > "release/PD-Signal-Linux/版本信息.txt" << 'EOF'
 PD Signal - PandaLive监控工具
 版本: ${{ env.BUILD_VERSION }}
 构建时间: $(date '+%Y-%m-%d %H:%M:%S')
@@ -283,7 +283,7 @@ EOF
         cp project_overview.md "release/PD-Signal-macOS/source/"
         
         # 创建版本信息
-        cat > "release/PD-Signal-macOS/版本信息.txt" << EOF
+        cat > "release/PD-Signal-macOS/版本信息.txt" << 'EOF'
 PD Signal - PandaLive监控工具
 版本: ${{ env.BUILD_VERSION }}
 构建时间: $(date '+%Y-%m-%d %H:%M:%S')
