@@ -1,0 +1,95 @@
+name: Build Windows Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        
+    - name: Build with PyInstaller
+      run: |
+        pyinstaller --name="PDSignal" ^
+          --windowed ^
+          --onedir ^
+          --distpath="dist" ^
+          --workpath="build" ^
+          --specpath="." ^
+          --add-data="sql;sql" ^
+          --add-data="usersetting.json;." ^
+          --hidden-import="flet" ^
+          --hidden-import="plyer" ^
+          --hidden-import="requests" ^
+          --hidden-import="certifi" ^
+          --hidden-import="urllib3" ^
+          --hidden-import="charset_normalizer" ^
+          --hidden-import="idna" ^
+          main.py
+          
+    - name: Create release archive
+      run: |
+        # 创建发布目录
+        mkdir release
+        
+        # 复制构建结果到发布目录
+        xcopy "dist\PDSignal" "release\PDSignal" /E /I /Y
+        
+        # 复制必要的配置文件
+        copy "README.md" "release\"
+        copy "README_CN.md" "release\"
+        copy "LICENSE" "release\"
+        
+        # 创建版本信息文件
+        echo "PDSignal Windows Release" > "release\VERSION.txt"
+        echo "Build Date: %date% %time%" >> "release\VERSION.txt"
+        echo "Git Tag: ${{ github.ref_name }}" >> "release\VERSION.txt"
+        
+        # 创建ZIP压缩包
+        powershell Compress-Archive -Path "release\*" -DestinationPath "PDSignal-Windows-${{ github.ref_name }}.zip"
+        
+    - name: Upload release artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: PDSignal-Windows-${{ github.ref_name }}
+        path: PDSignal-Windows-${{ github.ref_name }}.zip
+        
+    - name: Create Release
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v1
+      with:
+        files: PDSignal-Windows-${{ github.ref_name }}.zip
+        name: Release ${{ github.ref_name }}
+        body: |
+          ## PDSignal Windows Release ${{ github.ref_name }}
+          
+          ### 安装说明
+          1. 下载并解压 `PDSignal-Windows-${{ github.ref_name }}.zip`
+          2. 运行 `PDSignal.exe` 启动程序
+          
+          ### 系统要求
+          - Windows 10 或更高版本
+          - 无需安装Python环境
+          
+          ### 更新内容
+          请查看提交历史了解具体更新内容。
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
