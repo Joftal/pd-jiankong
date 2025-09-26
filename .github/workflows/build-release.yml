@@ -322,6 +322,37 @@ jobs:
         echo ""
         echo "=== macOS产物 ==="
         ls -la PD-Signal-macOS-*/ 2>/dev/null || echo "macOS产物未找到"
+        
+    - name: 验证构建产物
+      run: |
+        echo "=== 验证构建产物 ==="
+        
+        # 检查Windows产物
+        if [ -d "PD-Signal-Windows-"* ]; then
+          echo "✅ Windows产物目录存在"
+          ls -la PD-Signal-Windows-*/
+        else
+          echo "❌ Windows产物目录不存在"
+          exit 1
+        fi
+        
+        # 检查Linux产物
+        if [ -d "PD-Signal-Linux-"* ]; then
+          echo "✅ Linux产物目录存在"
+          ls -la PD-Signal-Linux-*/
+        else
+          echo "❌ Linux产物目录不存在"
+          exit 1
+        fi
+        
+        # 检查macOS产物
+        if [ -d "PD-Signal-macOS-"* ]; then
+          echo "✅ macOS产物目录存在"
+          ls -la PD-Signal-macOS-*/
+        else
+          echo "❌ macOS产物目录不存在"
+          exit 1
+        fi
       
     - name: 准备发布文件
       run: |
@@ -351,6 +382,31 @@ jobs:
         
         echo "=== 准备发布的文件 ==="
         ls -la release-files/
+        
+        # 验证关键文件存在
+        echo "=== 验证关键文件 ==="
+        if [ ! -f "release-files/PD-Signal.exe" ]; then
+          echo "❌ Windows可执行文件不存在"
+          exit 1
+        else
+          echo "✅ Windows可执行文件存在"
+        fi
+        
+        if [ ! -f "release-files/PD-Signal" ]; then
+          echo "❌ Linux可执行文件不存在"
+          exit 1
+        else
+          echo "✅ Linux可执行文件存在"
+        fi
+        
+        if [ ! -f "release-files/macOS-PD-Signal" ]; then
+          echo "❌ macOS可执行文件不存在"
+          exit 1
+        else
+          echo "✅ macOS可执行文件存在"
+        fi
+        
+        echo "✅ 所有关键文件验证通过"
       
     - name: 创建发布
       uses: softprops/action-gh-release@v1

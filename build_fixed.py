@@ -133,25 +133,6 @@ def build_executable():
         print(f"错误输出: {e.stderr}")
         return False
 
-def create_installer():
-    """创建安装包（可选）"""
-    print("[PACKAGE] 创建安装包...")
-    
-    # 这里可以添加NSIS或其他安装包创建工具的调用
-    # 暂时只是创建一个简单的批处理文件
-    
-    batch_content = '''@echo off
-echo 正在启动 PD Signal...
-cd /d "%~dp0"
-PD-Signal.exe
-pause
-'''
-    
-    with open("dist/启动PD-Signal.bat", "w", encoding="gbk") as f:
-        f.write(batch_content)
-    
-    print("[CHECK] 创建启动脚本: 启动PD-Signal.bat")
-
 def create_readme():
     """创建使用说明"""
     readme_content = """# PD Signal - PandaLive监控工具

@@ -96,6 +96,26 @@ jobs:
         $versionInfo = "PD Signal - PandaLive监控工具`n版本: ${{ env.BUILD_VERSION }}`n构建时间: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')`n构建环境: GitHub Actions Windows`nPython版本: ${{ env.PYTHON_VERSION }}`nGit提交: ${{ github.sha }}"
         $versionInfo | Out-File -FilePath "$releaseDir\版本信息.txt" -Encoding UTF8
         
+    - name: 验证发布文件存在
+      shell: pwsh
+      run: |
+        Write-Output "=== 验证发布文件 ==="
+        $files = @(
+          "dist\PD-Signal.exe",
+          "dist\使用说明.txt",
+          "release\PD-Signal-Windows\版本信息.txt"
+        )
+        
+        foreach ($file in $files) {
+          if (Test-Path $file) {
+            $size = (Get-Item $file).Length / 1KB
+            Write-Output "✅ $file 存在 ($([math]::Round($size, 2)) KB)"
+          } else {
+            Write-Output "❌ $file 不存在"
+            exit 1
+          }
+        }
+        
     - name: 创建GitHub Release
       if: startsWith(github.ref, 'refs/tags/')
       uses: softprops/action-gh-release@v1

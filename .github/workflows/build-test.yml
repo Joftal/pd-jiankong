@@ -98,7 +98,6 @@ jobs:
         
         # 复制主要文件
         Copy-Item "dist\PD-Signal.exe" "$releaseDir\"
-        Copy-Item "dist\启动PD-Signal.bat" "$releaseDir\"
         Copy-Item "dist\使用说明.txt" "$releaseDir\"
         
         # 复制源码和文档
@@ -147,6 +146,5 @@ jobs:
         Write-Output "💡 使用说明:"
         Write-Output "   1. 这是测试版本，用于验证构建流程"
         Write-Output "   2. 下载 PD-Signal.exe 进行测试"
-        Write-Output "   3. 使用 启动PD-Signal.bat 可查看控制台输出"
-        Write-Output "   4. 查看 测试说明.txt 了解测试详情"
+        Write-Output "   3. 查看 测试说明.txt 了解测试详情"
         Write-Output "=========================================="
