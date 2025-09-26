@@ -282,7 +282,7 @@ class PDSignalApp:
                 )
             else:
                 # 在线/离线主播列：根据列表类型显示不同信息
-                status_icon = "🟢" if vtb['liveStatus'] else "🔴"
+                status_icon = "[ONLINE]" if vtb['liveStatus'] else "[OFFLINE]"
                 status_text = "在线" if vtb['liveStatus'] else "离线"
                 
                 if title == "离线主播":
@@ -325,7 +325,7 @@ class PDSignalApp:
                     # 添加播放按钮（在备注之后）
                     main_content.append(ft.Row([
                         ft.ElevatedButton(
-                            "📺 播放直播",
+                            "[LIVE] 播放直播",
                             on_click=self._create_open_live_handler(vtb['mid']),
                             bgcolor=self.get_theme_colors()['primary'],
                             color=ft.Colors.WHITE,
@@ -347,13 +347,13 @@ class PDSignalApp:
     def add_streamer(self, e):
         """添加主播"""
         if not self.streamer_id_field.value.strip():
-            self.add_log_message("❌ 添加主播失败: 主播ID为空")
+            self.add_log_message("[ERROR] 添加主播失败: 主播ID为空")
             self.show_snackbar("请输入主播ID", ft.Colors.RED)
             return
         
         mid = self.streamer_id_field.value.strip()
         remark = self.streamer_remark_field.value.strip() if self.streamer_remark_field.value else ""
-        self.add_log_message(f"🔍 正在添加主播: {mid}" + (f" (备注: {remark})" if remark else ""))
+        self.add_log_message(f"[SEARCH] 正在添加主播: {mid}" + (f" (备注: {remark})" if remark else ""))
         
         # 显示加载状态
         self.show_snackbar("正在添加主播...", ft.Colors.BLUE)
@@ -365,18 +365,18 @@ class PDSignalApp:
             try:
                 success, message = loop.run_until_complete(self.monitor.add_streamer(mid, remark))
                 if success:
-                    self.add_log_message(f"✅ {message}")
+                    self.add_log_message(f"[OK] {message}")
                     self.show_snackbar(message, ft.Colors.GREEN)
                     self.streamer_id_field.value = ""
                     self.streamer_remark_field.value = ""
                     self.update_streamer_list()
                     self.page.update()
                 else:
-                    self.add_log_message(f"❌ {message}")
+                    self.add_log_message(f"[ERROR] {message}")
                     self.show_snackbar(message, ft.Colors.RED)
             except Exception as ex:
                 error_msg = f"添加失败: {str(ex)}"
-                self.add_log_message(f"❌ {error_msg}")
+                self.add_log_message(f"[ERROR] {error_msg}")
                 self.show_snackbar(error_msg, ft.Colors.RED)
             finally:
                 loop.close()
@@ -387,29 +387,29 @@ class PDSignalApp:
     def remove_streamer(self, mid: str):
         """移除主播"""
         try:
-            self.add_log_message(f"🗑️ 正在移除主播: {mid}")
+            self.add_log_message(f"[DELETE] 正在移除主播: {mid}")
             success, message = self.monitor.remove_streamer(mid)
             if success:
-                self.add_log_message(f"✅ {message}")
+                self.add_log_message(f"[OK] {message}")
                 self.show_snackbar(message, ft.Colors.GREEN)
                 self.update_streamer_list()
                 self.page.update()
             else:
-                self.add_log_message(f"❌ {message}")
+                self.add_log_message(f"[ERROR] {message}")
                 self.show_snackbar(message, ft.Colors.RED)
         except Exception as ex:
             error_msg = f"移除失败: {str(ex)}"
-            self.add_log_message(f"❌ {error_msg}")
+            self.add_log_message(f"[ERROR] {error_msg}")
             self.show_snackbar(error_msg, ft.Colors.RED)
     
     def edit_streamer_remark(self, mid: str):
         """编辑主播备注"""
         print(f"编辑备注被调用: {mid}")  # 调试信息
-        self.add_log_message(f"📝 正在编辑主播 {mid} 的备注")
+        self.add_log_message(f"[EDIT] 正在编辑主播 {mid} 的备注")
         
         vtb = self.db.get_vtb_by_mid(mid)
         if not vtb:
-            self.add_log_message("❌ 主播不存在")
+            self.add_log_message("[ERROR] 主播不存在")
             self.show_snackbar("主播不存在", ft.Colors.RED)
             return
         
@@ -427,11 +427,11 @@ class PDSignalApp:
             new_remark = remark_field.value.strip()
             success, message = self.monitor.update_streamer_remark(mid, new_remark)
             if success:
-                self.add_log_message(f"✅ {message}")
+                self.add_log_message(f"[OK] {message}")
                 self.show_snackbar(message, ft.Colors.GREEN)
                 self.update_streamer_list()
             else:
-                self.add_log_message(f"❌ {message}")
+                self.add_log_message(f"[ERROR] {message}")
                 self.show_snackbar(message, ft.Colors.RED)
             # 关闭对话框
             dialog.open = False
@@ -465,31 +465,31 @@ class PDSignalApp:
                 self.page.overlay.append(dialog)
             dialog.open = True
             self.page.update()
-            self.add_log_message(f"✅ 编辑对话框已打开")
+            self.add_log_message(f"[OK] 编辑对话框已打开")
         except Exception as ex:
-            self.add_log_message(f"❌ 打开对话框失败: {str(ex)}")
+            self.add_log_message(f"[ERROR] 打开对话框失败: {str(ex)}")
             self.show_snackbar(f"打开对话框失败: {str(ex)}", ft.Colors.RED)
     
     def _create_edit_remark_handler(self, mid: str):
         """创建编辑备注的事件处理器"""
         def handler(e):
             print(f"编辑备注按钮被点击: {mid}")  # 调试信息
-            self.add_log_message(f"🔘 编辑备注按钮被点击: {mid}")
+            self.add_log_message(f"[BUTTON] 编辑备注按钮被点击: {mid}")
             try:
                 self.edit_streamer_remark(mid)
             except Exception as ex:
-                self.add_log_message(f"❌ 编辑备注时出错: {str(ex)}")
+                self.add_log_message(f"[ERROR] 编辑备注时出错: {str(ex)}")
                 self.show_snackbar(f"编辑备注时出错: {str(ex)}", ft.Colors.RED)
         return handler
     
     def _create_open_live_handler(self, mid: str):
         """创建打开直播链接的事件处理器"""
         def handler(e):
-            self.add_log_message(f"🔘 播放直播按钮被点击: {mid}")
+            self.add_log_message(f"[BUTTON] 播放直播按钮被点击: {mid}")
             try:
                 self.open_live_stream(mid)
             except Exception as ex:
-                self.add_log_message(f"❌ 打开直播时出错: {str(ex)}")
+                self.add_log_message(f"[ERROR] 打开直播时出错: {str(ex)}")
                 self.show_snackbar(f"打开直播时出错: {str(ex)}", ft.Colors.RED)
         return handler
     
@@ -497,29 +497,29 @@ class PDSignalApp:
         """打开直播链接"""
         import webbrowser
         live_url = f"https://5721004.xyz/player/pandalive.html?url={mid}"
-        self.add_log_message(f"🌐 正在打开直播链接: {live_url}")
+        self.add_log_message(f"[WEB] 正在打开直播链接: {live_url}")
         try:
             webbrowser.open(live_url)
-            self.add_log_message(f"✅ 直播链接已打开: {mid}")
+            self.add_log_message(f"[OK] 直播链接已打开: {mid}")
             self.show_snackbar(f"正在打开主播 {mid} 的直播", ft.Colors.GREEN)
         except Exception as ex:
             error_msg = f"打开直播链接失败: {str(ex)}"
-            self.add_log_message(f"❌ {error_msg}")
+            self.add_log_message(f"[ERROR] {error_msg}")
             self.show_snackbar(error_msg, ft.Colors.RED)
     
     def toggle_monitoring(self, e):
         """切换监控状态"""
         if self.monitor.is_running:
-            self.add_log_message("⏹️ 正在停止监控...")
+            self.add_log_message("[STOP] 正在停止监控...")
             self.monitor.stop_monitoring()
         else:
             # 检查Cookie
             if not self.monitor.get_cookie() or self.monitor.get_cookie() == "Your Cookie":
-                self.add_log_message("❌ 启动监控失败: Cookie未设置")
+                self.add_log_message("[ERROR] 启动监控失败: Cookie未设置")
                 self.show_snackbar("请先设置有效的Cookie", ft.Colors.RED)
                 return
             
-            self.add_log_message("🚀 正在启动监控...")
+            self.add_log_message("[START] 正在启动监控...")
             self.monitor.start_monitoring()
         
         # 更新按钮状态和状态显示
@@ -533,10 +533,10 @@ class PDSignalApp:
         cookie = self.cookie_field.value.strip()
         if cookie:
             self.monitor.set_cookie(cookie)
-            self.add_log_message("✅ Cookie已保存")
+            self.add_log_message("[OK] Cookie已保存")
             self.show_snackbar("Cookie已保存", ft.Colors.GREEN)
         else:
-            self.add_log_message("❌ Cookie为空，保存失败")
+            self.add_log_message("[ERROR] Cookie为空，保存失败")
             self.show_snackbar("请输入有效的Cookie", ft.Colors.RED)
     
     def save_intervals(self, e):
@@ -547,10 +547,10 @@ class PDSignalApp:
             streamer_interval = int(self.streamer_interval_field.value) if self.streamer_interval_field.value else 5
             
             self.monitor.set_intervals(check_interval, main_interval, streamer_interval)
-            self.add_log_message(f"⚙️ 间隔设置已保存: 检测={check_interval}s, 更新={main_interval}s, 主播间={streamer_interval}s")
+            self.add_log_message(f"[SETTINGS] 间隔设置已保存: 检测={check_interval}s, 更新={main_interval}s, 主播间={streamer_interval}s")
             self.show_snackbar("间隔设置已保存", ft.Colors.GREEN)
         except ValueError:
-            self.add_log_message("❌ 间隔设置保存失败: 输入格式错误")
+            self.add_log_message("[ERROR] 间隔设置保存失败: 输入格式错误")
             self.show_snackbar("请输入有效的数字", ft.Colors.RED)
     
     def show_snackbar(self, message: str, color):
@@ -570,7 +570,7 @@ class PDSignalApp:
             self.page.theme_mode = ft.ThemeMode.DARK if self.is_dark_theme else ft.ThemeMode.LIGHT
             self.db.set_config("theme", "dark" if self.is_dark_theme else "light")
             
-            self.add_log_message(f"🎨 主题已切换为: {'暗色' if self.is_dark_theme else '亮色'}")
+            self.add_log_message(f"[THEME] 主题已切换为: {'暗色' if self.is_dark_theme else '亮色'}")
             
             # 重新构建界面以应用新主题
             self.page.clean()
@@ -653,7 +653,7 @@ class PDSignalApp:
     
     def clear_logs(self, e):
         """清空日志"""
-        self.add_log_message("🗑️ 日志已清空")
+        self.add_log_message("[DELETE] 日志已清空")
         self.log_messages.clear()
         self.update_log_display()
         self.page.update()
@@ -688,7 +688,7 @@ class PDSignalApp:
                 ft.Text("PandaLive 监控系统", size=16, color=colors['text_secondary']),
                 ft.Container(expand=True),  # 占位符，推动右侧内容到右边
                 ft.ElevatedButton(
-                    "🌙 暗色" if self.is_dark_theme else "☀️ 亮色",
+                    "[DARK] 暗色" if self.is_dark_theme else "[LIGHT] 亮色",
                     on_click=self.toggle_theme,
                     bgcolor=colors['primary'],
                     color=ft.Colors.WHITE,
@@ -988,20 +988,20 @@ class PDSignalApp:
         self.update_streamer_list()  # 初始化主播列表显示
         
         # 添加初始化日志
-        self.add_log_message("🚀 PD Signal 应用已启动")
-        self.add_log_message(f"📊 数据库路径: {self.db.db_path}")
-        self.add_log_message(f"🎨 当前主题: {'暗色' if self.is_dark_theme else '亮色'}")
+        self.add_log_message("[START] PD Signal 应用已启动")
+        self.add_log_message(f"[STATS] 数据库路径: {self.db.db_path}")
+        self.add_log_message(f"[THEME] 当前主题: {'暗色' if self.is_dark_theme else '亮色'}")
         
         # 检查Cookie状态
         cookie = self.monitor.get_cookie()
         if cookie and cookie != "Your Cookie":
-            self.add_log_message("✅ Cookie已设置")
+            self.add_log_message("[OK] Cookie已设置")
         else:
-            self.add_log_message("⚠️ 请设置PandaLive Cookie")
+            self.add_log_message("[WARNING] 请设置PandaLive Cookie")
         
         # 检查监控列表
         watched_count = len(self.db.get_all_watched_vtbs())
-        self.add_log_message(f"📋 当前监控主播数量: {watched_count}")
+        self.add_log_message(f"[LIST] 当前监控主播数量: {watched_count}")
         
         page.update()
     

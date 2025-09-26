@@ -108,27 +108,27 @@ class PandaLiveMonitor:
                 'cookie': self.get_cookie()
             }
             
-            self._notify_status_change(f"🌐 正在请求API: offset={offset}, limit={limit}")
+            self._notify_status_change(f"[WEB] 正在请求API: offset={offset}, limit={limit}")
             start_time = time.time()
             
             response = requests.get(url, params=params, headers=headers, timeout=5)
             response.raise_for_status()
             
             request_time = time.time() - start_time
-            self._notify_status_change(f"✅ API请求成功: 耗时{request_time:.2f}秒, 状态码={response.status_code}")
+            self._notify_status_change(f"[OK] API请求成功: 耗时{request_time:.2f}秒, 状态码={response.status_code}")
             
             data = response.json()
             if data and data.get('result'):
                 list_count = len(data.get('list', []))
-                self._notify_status_change(f"📋 解析数据成功: 获取到{list_count}个主播信息")
+                self._notify_status_change(f"[LIST] 解析数据成功: 获取到{list_count}个主播信息")
             else:
-                self._notify_status_change("⚠️ API返回数据为空或格式异常")
+                self._notify_status_change("[WARNING] API返回数据为空或格式异常")
             
             return data
         except Exception as e:
             error_msg = f"获取API数据失败: {e}"
             self.logger.error(error_msg)
-            self._notify_status_change(f"❌ {error_msg}")
+            self._notify_status_change(f"[ERROR] {error_msg}")
             return None
     
     async def fetch_streamer_info(self, mid: str) -> Optional[Dict]:
@@ -144,26 +144,26 @@ class PandaLiveMonitor:
                 'x-device-info': '{"t":"webPc","v":"1.0","ui":24631221}'
             }
             
-            self._notify_status_change(f"🔍 正在获取主播 {mid} 的详细信息")
+            self._notify_status_change(f"[SEARCH] 正在获取主播 {mid} 的详细信息")
             start_time = time.time()
             
             response = requests.post(url, data=data, headers=headers, timeout=5)
             response.raise_for_status()
             
             request_time = time.time() - start_time
-            self._notify_status_change(f"✅ 主播信息请求成功: {mid}, 耗时{request_time:.2f}秒")
+            self._notify_status_change(f"[OK] 主播信息请求成功: {mid}, 耗时{request_time:.2f}秒")
             
             result = response.json()
             if result and result.get('result'):
-                self._notify_status_change(f"📋 主播 {mid} 信息解析成功")
+                self._notify_status_change(f"[LIST] 主播 {mid} 信息解析成功")
             else:
-                self._notify_status_change(f"⚠️ 主播 {mid} 信息为空或格式异常")
+                self._notify_status_change(f"[WARNING] 主播 {mid} 信息为空或格式异常")
             
             return result
         except Exception as e:
             error_msg = f"获取主播信息失败 {mid}: {e}"
             self.logger.error(error_msg)
-            self._notify_status_change(f"❌ {error_msg}")
+            self._notify_status_change(f"[ERROR] {error_msg}")
             return None
     
     async def update_all_streamers_data(self):
@@ -171,7 +171,7 @@ class PandaLiveMonitor:
         try:
             cookie = self.get_cookie()
             if not cookie or cookie == "Your Cookie":
-                self._notify_status_change("⚠️ 请设置有效的Cookie")
+                self._notify_status_change("[WARNING] 请设置有效的Cookie")
                 return
             
             self._notify_status_change("🔄 开始更新所有主播数据...")
@@ -180,12 +180,12 @@ class PandaLiveMonitor:
             # 获取第一页数据
             json_data = await self.fetch_json(0, self.batch_size)
             if not json_data or not json_data.get('result'):
-                self._notify_status_change("❌ 获取列表失败")
+                self._notify_status_change("[ERROR] 获取列表失败")
                 return
             
             total = json_data.get('page', {}).get('total', 0)
             first_page_count = len(json_data.get('list', []))
-            self._notify_status_change(f"📊 在线主播总数: {total} | 第一页获取: {first_page_count}个主播")
+            self._notify_status_change(f"[STATS] 在线主播总数: {total} | 第一页获取: {first_page_count}个主播")
             
             # 如果在线主播数超过batch_size，获取更多页面
             if total > self.batch_size:
@@ -206,36 +206,36 @@ class PandaLiveMonitor:
                         new_items = [item for item in json2.get('list', []) 
                                    if item.get('code') not in existing_codes]
                         json_data['list'].extend(new_items)
-                        self._notify_status_change(f"✅ 第{page}页合并成功: 新增{len(new_items)}个主播")
+                        self._notify_status_change(f"[OK] 第{page}页合并成功: 新增{len(new_items)}个主播")
                         remaining -= self.batch_size
                         page += 1
                     else:
-                        self._notify_status_change(f"⚠️ 第{page}页获取失败，停止获取")
+                        self._notify_status_change(f"[WARNING] 第{page}页获取失败，停止获取")
                         break
             
             # 保存数据到缓存
             self.cached_data = json_data
             total_time = time.time() - start_time
             final_count = len(json_data.get('list', []))
-            self._notify_status_change(f"✅ 数据更新完成: 总计{final_count}个主播, 耗时{total_time:.2f}秒")
+            self._notify_status_change(f"[OK] 数据更新完成: 总计{final_count}个主播, 耗时{total_time:.2f}秒")
             
         except Exception as e:
             error_msg = f"更新数据失败: {str(e)}"
             self.logger.error(error_msg)
-            self._notify_status_change(f"❌ {error_msg}")
+            self._notify_status_change(f"[ERROR] {error_msg}")
     
     async def check_watched_streamers(self):
         """检查监控的主播状态"""
         watched_vtbs = self.db.get_all_watched_vtbs()
         if not watched_vtbs:
-            self._notify_status_change("📋 没有需要监控的主播")
+            self._notify_status_change("[LIST] 没有需要监控的主播")
             return
         
         if not self.cached_data or not self.cached_data.get('list'):
-            self._notify_status_change("⚠️ 缓存数据为空，跳过主播状态检查")
+            self._notify_status_change("[WARNING] 缓存数据为空，跳过主播状态检查")
             return
         
-        self._notify_status_change(f"🔍 开始检查 {len(watched_vtbs)} 个监控主播的状态...")
+        self._notify_status_change(f"[SEARCH] 开始检查 {len(watched_vtbs)} 个监控主播的状态...")
         start_time = time.time()
         online_count = 0
         offline_count = 0
@@ -243,7 +243,7 @@ class PandaLiveMonitor:
         # 处理每个监控的主播
         for i, vtb in enumerate(watched_vtbs, 1):
             try:
-                self._notify_status_change(f"🔍 [{i}/{len(watched_vtbs)}] 检查主播: {vtb['mid']}")
+                self._notify_status_change(f"[SEARCH] [{i}/{len(watched_vtbs)}] 检查主播: {vtb['mid']}")
                 
                 # 在缓存数据中查找该主播
                 streamer_data = None
@@ -256,13 +256,13 @@ class PandaLiveMonitor:
                     # 主播在线
                     await self._process_online_streamer(vtb, streamer_data)
                     online_count += 1
-                    self._notify_status_change(f"🟢 [{i}/{len(watched_vtbs)}] {vtb['mid']}: 在线")
+                    self._notify_status_change(f"[ONLINE] [{i}/{len(watched_vtbs)}] {vtb['mid']}: 在线")
                     self.logger.info(f"{vtb['mid']}: online")
                 else:
                     # 主播离线
                     await self._process_offline_streamer(vtb)
                     offline_count += 1
-                    self._notify_status_change(f"🔴 [{i}/{len(watched_vtbs)}] {vtb['mid']}: 离线")
+                    self._notify_status_change(f"[OFFLINE] [{i}/{len(watched_vtbs)}] {vtb['mid']}: 离线")
                     self.logger.info(f"{vtb['mid']}: offline")
                 
                 # 检查间隔
@@ -273,10 +273,10 @@ class PandaLiveMonitor:
             except Exception as e:
                 error_msg = f"检查主播 {vtb['mid']} 时出错: {e}"
                 self.logger.error(error_msg)
-                self._notify_status_change(f"❌ {error_msg}")
+                self._notify_status_change(f"[ERROR] {error_msg}")
         
         total_time = time.time() - start_time
-        self._notify_status_change(f"✅ 主播状态检查完成: 在线{online_count}个, 离线{offline_count}个, 耗时{total_time:.2f}秒")
+        self._notify_status_change(f"[OK] 主播状态检查完成: 在线{online_count}个, 离线{offline_count}个, 耗时{total_time:.2f}秒")
     
     async def _process_online_streamer(self, vtb: Dict, streamer_data: Dict):
         """处理在线主播"""
@@ -333,36 +333,36 @@ class PandaLiveMonitor:
     def start_monitoring(self):
         """启动监控"""
         if self.is_running:
-            self._notify_status_change("⚠️ 监控已在运行中")
+            self._notify_status_change("[WARNING] 监控已在运行中")
             return False
         
-        self._notify_status_change("🚀 正在启动监控系统...")
-        self._notify_status_change(f"⚙️ 监控配置: 检测间隔={self.check_interval}秒, 主循环间隔={self.main_interval}秒, 主播间间隔={self.streamer_interval}秒")
+        self._notify_status_change("[START] 正在启动监控系统...")
+        self._notify_status_change(f"[SETTINGS] 监控配置: 检测间隔={self.check_interval}秒, 主循环间隔={self.main_interval}秒, 主播间间隔={self.streamer_interval}秒")
         
         self.is_running = True
         self.monitor_thread = threading.Thread(target=self._monitoring_loop, daemon=True)
         self.monitor_thread.start()
         
-        self._notify_status_change("✅ 监控系统启动成功")
+        self._notify_status_change("[OK] 监控系统启动成功")
         return True
     
     def stop_monitoring(self):
         """停止监控"""
         if not self.is_running:
-            self._notify_status_change("⚠️ 监控未在运行")
+            self._notify_status_change("[WARNING] 监控未在运行")
             return
             
-        self._notify_status_change("⏹️ 正在停止监控系统...")
+        self._notify_status_change("[STOP] 正在停止监控系统...")
         self.is_running = False
         
         if self.monitor_thread:
             self.monitor_thread.join(timeout=5)
             if self.monitor_thread.is_alive():
-                self._notify_status_change("⚠️ 监控线程未能在5秒内停止")
+                self._notify_status_change("[WARNING] 监控线程未能在5秒内停止")
             else:
-                self._notify_status_change("✅ 监控线程已安全停止")
+                self._notify_status_change("[OK] 监控线程已安全停止")
         
-        self._notify_status_change("⏹️ 监控系统已完全停止")
+        self._notify_status_change("[STOP] 监控系统已完全停止")
     
     def _monitoring_loop(self):
         """监控主循环"""
@@ -373,7 +373,7 @@ class PandaLiveMonitor:
             last_check_time = 0
             
             # 程序启动时立即进行一次数据更新
-            self._notify_status_change("🚀 程序启动，正在获取初始数据...")
+            self._notify_status_change("[START] 程序启动，正在获取初始数据...")
             await self.update_all_streamers_data()
             last_update_time = time.time()
             self.logger.info(f"初始数据更新完成，时间戳: {last_update_time}")
@@ -390,18 +390,18 @@ class PandaLiveMonitor:
                         
                         await self.update_all_streamers_data()
                         last_update_time = current_time
-                        self._notify_status_change(f"✅ 数据更新完成")
+                        self._notify_status_change(f"[OK] 数据更新完成")
                         self.logger.info(f"数据更新完成，下次更新时间: {last_update_time}")
                     
                     # 检查是否需要检测监控主播（检测间隔）
                     if current_time - last_check_time >= self.check_interval:
                         check_cycle_count += 1
-                        self._notify_status_change(f"🔍 开始第 {check_cycle_count} 轮主播检测...")
+                        self._notify_status_change(f"[SEARCH] 开始第 {check_cycle_count} 轮主播检测...")
                         self.logger.info(f"触发主播检测，第 {check_cycle_count} 轮")
                         
                         await self.check_watched_streamers()
                         last_check_time = current_time
-                        self._notify_status_change(f"✅ 主播检测完成")
+                        self._notify_status_change(f"[OK] 主播检测完成")
                         self.logger.info(f"主播检测完成，下次检测时间: {last_check_time}")
                     
                     # 简单等待1秒后重新检查
@@ -410,7 +410,7 @@ class PandaLiveMonitor:
                 except Exception as e:
                     error_msg = f"监控循环出错: {str(e)}"
                     self.logger.error(error_msg)
-                    self._notify_status_change(f"❌ {error_msg}")
+                    self._notify_status_change(f"[ERROR] {error_msg}")
                     self._notify_status_change("⏳ 出错后等待30秒再继续...")
                     await asyncio.sleep(30)  # 出错后等待30秒再继续
         
@@ -422,14 +422,14 @@ class PandaLiveMonitor:
     async def add_streamer(self, mid: str, remark: str = "") -> tuple:
         """添加主播到监控列表"""
         try:
-            self._notify_status_change(f"🔍 开始添加主播 {mid} 到监控列表...")
+            self._notify_status_change(f"[SEARCH] 开始添加主播 {mid} 到监控列表...")
             
             # 检查是否已在监控列表中
             existing = self.db.get_vtb_by_mid(mid)
             if existing and self.db.get_all_watched_vtbs():
                 watched_mids = [vtb['mid'] for vtb in self.db.get_all_watched_vtbs()]
                 if mid in watched_mids:
-                    self._notify_status_change(f"⚠️ 主播 {mid} 已在监控列表中")
+                    self._notify_status_change(f"[WARNING] 主播 {mid} 已在监控列表中")
                     return False, f"主播 {mid} 已在监控列表中"
             
             self._notify_status_change(f"📡 正在获取主播 {mid} 的详细信息...")
@@ -437,7 +437,7 @@ class PandaLiveMonitor:
             # 获取主播信息
             streamer_info = await self.fetch_streamer_info(mid)
             if not streamer_info or not streamer_info.get('result'):
-                self._notify_status_change(f"❌ 无法获取主播 {mid} 的信息")
+                self._notify_status_change(f"[ERROR] 无法获取主播 {mid} 的信息")
                 return False, f"无法获取主播 {mid} 的信息"
             
             media_data = streamer_info.get('media', {})
@@ -445,7 +445,7 @@ class PandaLiveMonitor:
             title = media_data.get('title', '')
             usernick = media_data.get('userNick', '')
             
-            self._notify_status_change(f"📋 主播 {mid} 信息获取成功: 昵称={usernick}, 标题={title[:30]}...")
+            self._notify_status_change(f"[LIST] 主播 {mid} 信息获取成功: 昵称={usernick}, 标题={title[:30]}...")
             
             # 构建完整标题
             live_type = "🎥" if media_data.get('liveType') == "rec" else ""
@@ -469,66 +469,66 @@ class PandaLiveMonitor:
             )
             
             if success:
-                self._notify_status_change(f"✅ 主播 {mid} 添加成功")
+                self._notify_status_change(f"[OK] 主播 {mid} 添加成功")
                 return True, f"成功添加主播 {mid}"
             else:
-                self._notify_status_change(f"❌ 主播 {mid} 添加到数据库失败")
+                self._notify_status_change(f"[ERROR] 主播 {mid} 添加到数据库失败")
                 return False, f"添加主播 {mid} 失败"
                 
         except Exception as e:
             error_msg = f"添加主播时出错: {str(e)}"
             self.logger.error(error_msg)
-            self._notify_status_change(f"❌ {error_msg}")
+            self._notify_status_change(f"[ERROR] {error_msg}")
             return False, error_msg
     
     def remove_streamer(self, mid: str) -> tuple:
         """从监控列表中移除主播"""
         try:
-            self._notify_status_change(f"🗑️ 开始移除主播 {mid} 从监控列表...")
+            self._notify_status_change(f"[DELETE] 开始移除主播 {mid} 从监控列表...")
             
             vtb = self.db.get_vtb_by_mid(mid)
             if not vtb:
-                self._notify_status_change(f"⚠️ 主播 {mid} 不存在于监控列表中")
+                self._notify_status_change(f"[WARNING] 主播 {mid} 不存在于监控列表中")
                 return False, f"主播 {mid} 不存在"
             
             self._notify_status_change(f"💾 正在从数据库中移除主播 {mid}...")
             
             success = self.db.remove_from_watch(mid)
             if success:
-                self._notify_status_change(f"✅ 主播 {mid} 移除成功")
+                self._notify_status_change(f"[OK] 主播 {mid} 移除成功")
                 return True, f"成功移除主播 {mid}"
             else:
-                self._notify_status_change(f"❌ 主播 {mid} 从数据库移除失败")
+                self._notify_status_change(f"[ERROR] 主播 {mid} 从数据库移除失败")
                 return False, f"移除主播 {mid} 失败"
                 
         except Exception as e:
             error_msg = f"移除主播时出错: {str(e)}"
             self.logger.error(error_msg)
-            self._notify_status_change(f"❌ {error_msg}")
+            self._notify_status_change(f"[ERROR] {error_msg}")
             return False, error_msg
     
     def update_streamer_remark(self, mid: str, remark: str) -> tuple:
         """更新主播备注"""
         try:
-            self._notify_status_change(f"📝 开始更新主播 {mid} 的备注...")
+            self._notify_status_change(f"[EDIT] 开始更新主播 {mid} 的备注...")
             
             vtb = self.db.get_vtb_by_mid(mid)
             if not vtb:
-                self._notify_status_change(f"⚠️ 主播 {mid} 不存在于监控列表中")
+                self._notify_status_change(f"[WARNING] 主播 {mid} 不存在于监控列表中")
                 return False, f"主播 {mid} 不存在"
             
             success = self.db.update_vtb_remark(mid, remark)
             if success:
-                self._notify_status_change(f"✅ 主播 {mid} 备注更新成功")
+                self._notify_status_change(f"[OK] 主播 {mid} 备注更新成功")
                 return True, f"成功更新主播 {mid} 的备注"
             else:
-                self._notify_status_change(f"❌ 主播 {mid} 备注更新失败")
+                self._notify_status_change(f"[ERROR] 主播 {mid} 备注更新失败")
                 return False, f"更新主播 {mid} 备注失败"
                 
         except Exception as e:
             error_msg = f"更新主播备注时出错: {str(e)}"
             self.logger.error(error_msg)
-            self._notify_status_change(f"❌ {error_msg}")
+            self._notify_status_change(f"[ERROR] {error_msg}")
             return False, error_msg
     
     def get_monitoring_status(self) -> Dict:

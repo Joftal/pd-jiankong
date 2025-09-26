@@ -48,7 +48,7 @@ class NotificationManager:
                 except:
                     time_info = ""
             
-            notification_title = f"🟢 {username} 开播了！"
+            notification_title = f"[ONLINE] {username} 开播了！"
             notification_message = f"{usernick}\n{clean_title}{time_info}"
             
             return self.send_notification(notification_title, notification_message)
@@ -59,7 +59,7 @@ class NotificationManager:
     def notify_streamer_offline(self, username: str, usernick: str) -> bool:
         """通知主播下播"""
         try:
-            notification_title = f"🔴 {username} 下播了"
+            notification_title = f"[OFFLINE] {username} 下播了"
             notification_message = f"{usernick}\n直播已结束"
             
             return self.send_notification(notification_title, notification_message)
@@ -70,7 +70,7 @@ class NotificationManager:
     def notify_status_change(self, username: str, usernick: str, old_title: str, new_title: str) -> bool:
         """通知状态变化"""
         try:
-            notification_title = f"📝 {username} 状态更新"
+            notification_title = f"[EDIT] {username} 状态更新"
             notification_message = f"{usernick}\n{new_title}"
             
             return self.send_notification(notification_title, notification_message, timeout=5)
@@ -81,7 +81,7 @@ class NotificationManager:
     def notify_error(self, error_message: str) -> bool:
         """发送错误通知"""
         try:
-            return self.send_notification("❌ PD Signal 错误", error_message, timeout=15)
+            return self.send_notification("[ERROR] PD Signal 错误", error_message, timeout=15)
         except Exception as e:
             print(f"发送错误通知失败: {e}")
             return False

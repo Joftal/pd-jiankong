@@ -38,6 +38,9 @@ jobs:
         python-version: ${{ env.PYTHON_VERSION }}
         cache: 'pip'
         
+    - name: 设置UTF-8编码环境
+      run: echo PYTHONIOENCODING=utf-8 >> $env:GITHUB_ENV
+        
     - name: 缓存pip依赖
       uses: actions/cache@v3
       with:
@@ -137,6 +140,9 @@ jobs:
         python-version: ${{ env.PYTHON_VERSION }}
         cache: 'pip'
         
+    - name: 设置UTF-8编码环境
+      run: echo PYTHONIOENCODING=utf-8 >> $GITHUB_ENV
+        
     - name: 安装系统依赖
       run: |
         sudo apt-get update
@@ -201,6 +207,9 @@ jobs:
       with:
         python-version: ${{ env.PYTHON_VERSION }}
         cache: 'pip'
+        
+    - name: 设置UTF-8编码环境
+      run: echo PYTHONIOENCODING=utf-8 >> $GITHUB_ENV
         
     - name: 安装Python依赖
       run: |
