@@ -191,14 +191,12 @@ jobs:
         cp project_overview.md "release/PD-Signal-Linux/source/"
         
         # 创建版本信息
-        cat > "release/PD-Signal-Linux/版本信息.txt" << 'EOF'
-PD Signal - PandaLive监控工具
-版本: ${{ env.BUILD_VERSION }}
-构建时间: $(date '+%Y-%m-%d %H:%M:%S')
-构建环境: GitHub Actions Linux
-Python版本: ${{ env.PYTHON_VERSION }}
-Git提交: ${{ github.sha }}
-EOF
+        echo "PD Signal - PandaLive监控工具" > "release/PD-Signal-Linux/版本信息.txt"
+        echo "版本: ${{ env.BUILD_VERSION }}" >> "release/PD-Signal-Linux/版本信息.txt"
+        echo "构建时间: $(date '+%Y-%m-%d %H:%M:%S')" >> "release/PD-Signal-Linux/版本信息.txt"
+        echo "构建环境: GitHub Actions Linux" >> "release/PD-Signal-Linux/版本信息.txt"
+        echo "Python版本: ${{ env.PYTHON_VERSION }}" >> "release/PD-Signal-Linux/版本信息.txt"
+        echo "Git提交: ${{ github.sha }}" >> "release/PD-Signal-Linux/版本信息.txt"
         
     - name: 上传Linux构建产物
       uses: actions/upload-artifact@v4
@@ -283,14 +281,12 @@ EOF
         cp project_overview.md "release/PD-Signal-macOS/source/"
         
         # 创建版本信息
-        cat > "release/PD-Signal-macOS/版本信息.txt" << 'EOF'
-PD Signal - PandaLive监控工具
-版本: ${{ env.BUILD_VERSION }}
-构建时间: $(date '+%Y-%m-%d %H:%M:%S')
-构建环境: GitHub Actions macOS
-Python版本: ${{ env.PYTHON_VERSION }}
-Git提交: ${{ github.sha }}
-EOF
+        echo "PD Signal - PandaLive监控工具" > "release/PD-Signal-macOS/版本信息.txt"
+        echo "版本: ${{ env.BUILD_VERSION }}" >> "release/PD-Signal-macOS/版本信息.txt"
+        echo "构建时间: $(date '+%Y-%m-%d %H:%M:%S')" >> "release/PD-Signal-macOS/版本信息.txt"
+        echo "构建环境: GitHub Actions macOS" >> "release/PD-Signal-macOS/版本信息.txt"
+        echo "Python版本: ${{ env.PYTHON_VERSION }}" >> "release/PD-Signal-macOS/版本信息.txt"
+        echo "Git提交: ${{ github.sha }}" >> "release/PD-Signal-macOS/版本信息.txt"
         
     - name: 上传macOS构建产物
       uses: actions/upload-artifact@v4
