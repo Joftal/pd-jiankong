@@ -84,7 +84,9 @@ class DatabaseManager:
             'streamer_interval': '5',
             'theme': 'dark',
             'proxy_enabled': 'false',
-            'proxy_url': ''
+            'proxy_url': '',
+            'online_notification': 'true',
+            'offline_notification': 'true'
         }
         
         for key, value in default_configs.items():

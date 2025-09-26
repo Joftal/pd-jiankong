@@ -1,5 +1,6 @@
 # 本地构建脚本 - build_local.bat
 @echo off
+chcp 65001 >nul
 echo 开始本地构建 PDSignal...
 
 REM 检查Python是否安装
@@ -23,6 +24,7 @@ echo 开始构建...
 pyinstaller --name="PDSignal" ^
   --windowed ^
   --onedir ^
+  --icon="pandatv.ico" ^
   --distpath="dist" ^
   --workpath="build" ^
   --specpath="." ^
