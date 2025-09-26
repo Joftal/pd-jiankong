@@ -26,43 +26,46 @@ jobs:
         
     - name: Build with PyInstaller
       run: |
-        pyinstaller --name="PDSignal" ^
-          --windowed ^
-          --onedir ^
-          --distpath="dist" ^
-          --workpath="build" ^
-          --specpath="." ^
-          --add-data="sql;sql" ^
-          --add-data="usersetting.json;." ^
-          --hidden-import="flet" ^
-          --hidden-import="plyer" ^
-          --hidden-import="requests" ^
-          --hidden-import="certifi" ^
-          --hidden-import="urllib3" ^
-          --hidden-import="charset_normalizer" ^
-          --hidden-import="idna" ^
+        pyinstaller --name="PDSignal" `
+          --windowed `
+          --onedir `
+          --distpath="dist" `
+          --workpath="build" `
+          --specpath="." `
+          --add-data="sql;sql" `
+          --add-data="usersetting.json;." `
+          --hidden-import="flet" `
+          --hidden-import="plyer" `
+          --hidden-import="requests" `
+          --hidden-import="certifi" `
+          --hidden-import="urllib3" `
+          --hidden-import="charset_normalizer" `
+          --hidden-import="idna" `
           main.py
           
     - name: Create release archive
       run: |
         # 创建发布目录
-        mkdir release
+        New-Item -ItemType Directory -Path "release" -Force
         
         # 复制构建结果到发布目录
-        xcopy "dist\PDSignal" "release\PDSignal" /E /I /Y
+        Copy-Item -Path "dist\PDSignal" -Destination "release\PDSignal" -Recurse -Force
         
         # 复制必要的配置文件
-        copy "README.md" "release\"
-        copy "README_CN.md" "release\"
-        copy "LICENSE" "release\"
+        Copy-Item -Path "README.md" -Destination "release\" -Force
+        Copy-Item -Path "README_CN.md" -Destination "release\" -Force
+        Copy-Item -Path "LICENSE" -Destination "release\" -Force
         
         # 创建版本信息文件
-        echo "PDSignal Windows Release" > "release\VERSION.txt"
-        echo "Build Date: %date% %time%" >> "release\VERSION.txt"
-        echo "Git Tag: ${{ github.ref_name }}" >> "release\VERSION.txt"
+        $versionContent = @"
+PDSignal Windows Release
+Build Date: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
+Git Tag: ${{ github.ref_name }}
+"@
+        $versionContent | Out-File -FilePath "release\VERSION.txt" -Encoding UTF8
         
         # 创建ZIP压缩包
-        powershell Compress-Archive -Path "release\*" -DestinationPath "PDSignal-Windows-${{ github.ref_name }}.zip"
+        Compress-Archive -Path "release\*" -DestinationPath "PDSignal-Windows-${{ github.ref_name }}.zip" -Force
         
     - name: Upload release artifact
       uses: actions/upload-artifact@v4
