@@ -86,6 +86,7 @@ def build_executable():
         "--collect-all=flet",           # 收集flet的所有模块
         "--collect-all=requests",       # 收集requests的所有模块
         "--collect-all=plyer",          # 收集plyer的所有模块
+        "--collect-all=unicodedata",    # 收集Unicode数据支持
     ]
     
     # 添加图标
@@ -109,7 +110,10 @@ def build_executable():
         "urllib3",
         "certifi",
         "charset_normalizer",
-        "idna"
+        "idna",
+        "unicodedata",  # Unicode数据支持
+        "codecs",       # 编码支持
+        "locale"        # 本地化支持
     ]
     
     for import_name in hidden_imports:

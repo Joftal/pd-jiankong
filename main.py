@@ -129,13 +129,13 @@ class PDSignalApp:
         if self.status_text:
             status = self.monitor.get_monitoring_status()
             status_color = ft.Colors.GREEN if status['is_running'] else ft.Colors.RED
-            status_text = "运行中" if status['is_running'] else "已停止"
+            status_text = "🟢 运行中" if status['is_running'] else "🔴 已停止"
             
             self.status_text.value = (
-                f"监控状态: {status_text} | "
-                f"监控主播: {status['total_watched']} | "
-                f"在线: {status['online_count']} | "
-                f"离线: {status['offline_count']}"
+                f"📊 监控状态: {status_text} | "
+                f"👥 监控主播: {status['total_watched']} | "
+                f"🟢 在线: {status['online_count']} | "
+                f"🔴 离线: {status['offline_count']}"
             )
             self.status_text.color = status_color
     
@@ -258,7 +258,7 @@ class PDSignalApp:
                                        weight=ft.FontWeight.BOLD, size=14),
                                 ft.Row([
                                     ft.ElevatedButton(
-                                        "编辑备注",
+                                        "✏️ 编辑备注",
                                         on_click=self._create_edit_remark_handler(vtb['mid']),
                                         bgcolor=self.get_theme_colors()['primary'],
                                         color=ft.Colors.WHITE,
@@ -266,7 +266,7 @@ class PDSignalApp:
                                         style=ft.ButtonStyle(text_style=ft.TextStyle(size=9))
                                     ),
                                     ft.ElevatedButton(
-                                        "移除",
+                                        "🗑️ 移除",
                                         on_click=lambda e, mid=vtb['mid']: self.remove_streamer(mid),
                                         bgcolor=self.get_theme_colors()['error'],
                                         color=ft.Colors.WHITE,
@@ -282,7 +282,7 @@ class PDSignalApp:
                 )
             else:
                 # 在线/离线主播列：根据列表类型显示不同信息
-                status_icon = "[ONLINE]" if vtb['liveStatus'] else "[OFFLINE]"
+                status_icon = "🟢" if vtb['liveStatus'] else "🔴"
                 status_text = "在线" if vtb['liveStatus'] else "离线"
                 
                 if title == "离线主播":
@@ -325,7 +325,7 @@ class PDSignalApp:
                     # 添加播放按钮（在备注之后）
                     main_content.append(ft.Row([
                         ft.ElevatedButton(
-                            "[LIVE] 播放直播",
+                            "▶️ 播放直播",
                             on_click=self._create_open_live_handler(vtb['mid']),
                             bgcolor=self.get_theme_colors()['primary'],
                             color=ft.Colors.WHITE,
@@ -643,11 +643,11 @@ class PDSignalApp:
         if self.start_stop_btn:
             colors = self.get_theme_colors()
             if self.monitor.is_running:
-                self.start_stop_btn.text = "停止监控"
+                self.start_stop_btn.text = "⏹️ 停止监控"
                 self.start_stop_btn.bgcolor = colors['error']
                 self.start_stop_btn.color = ft.Colors.WHITE
             else:
-                self.start_stop_btn.text = "开始监控"
+                self.start_stop_btn.text = "▶️ 开始监控"
                 self.start_stop_btn.bgcolor = colors['success']
                 self.start_stop_btn.color = ft.Colors.WHITE
     
@@ -688,7 +688,7 @@ class PDSignalApp:
                 ft.Text("PandaLive 监控系统", size=16, color=colors['text_secondary']),
                 ft.Container(expand=True),  # 占位符，推动右侧内容到右边
                 ft.ElevatedButton(
-                    "[DARK] 暗色" if self.is_dark_theme else "[LIGHT] 亮色",
+                    "🌙 暗色" if self.is_dark_theme else "☀️ 亮色",
                     on_click=self.toggle_theme,
                     bgcolor=colors['primary'],
                     color=ft.Colors.WHITE,
@@ -701,9 +701,9 @@ class PDSignalApp:
         )
         
         # ==================== 状态栏 ====================
-        self.status_text = ft.Text("监控状态: 已停止", size=16, weight=ft.FontWeight.BOLD)
+        self.status_text = ft.Text("📊 监控状态: 🔴 已停止", size=16, weight=ft.FontWeight.BOLD)
         self.start_stop_btn = ft.ElevatedButton(
-            "开始监控",
+            "▶️ 开始监控",
             on_click=self.toggle_monitoring,
             bgcolor=colors['success'],
             color=ft.Colors.WHITE,
@@ -775,10 +775,10 @@ class PDSignalApp:
                 # Cookie区域
                 ft.Container(
                     content=ft.Column([
-                        ft.Text("Cookie 设置", size=16, weight=ft.FontWeight.BOLD),
+                        ft.Text("🍪 Cookie 设置", size=16, weight=ft.FontWeight.BOLD),
                         ft.Row([
                             self.cookie_field,
-                            ft.ElevatedButton("保存", on_click=self.save_cookie, 
+                            ft.ElevatedButton("💾 保存", on_click=self.save_cookie, 
                                            bgcolor=colors['primary'], color=ft.Colors.WHITE,
                                            height=40)
                         ], spacing=10)
@@ -792,13 +792,13 @@ class PDSignalApp:
                 # 监控设置区域
                 ft.Container(
                     content=ft.Column([
-                        ft.Text("监控设置", size=16, weight=ft.FontWeight.BOLD),
+                        ft.Text("⚙️ 监控设置", size=16, weight=ft.FontWeight.BOLD),
                         
                         # 更新间隔设置
                         ft.Column([
                             ft.Row([
                                 self.main_interval_field,
-                                ft.ElevatedButton("保存", on_click=self.save_intervals,
+                                ft.ElevatedButton("💾 保存", on_click=self.save_intervals,
                                                bgcolor=colors['primary'], color=ft.Colors.WHITE,
                                                height=40)
                             ], spacing=10),
@@ -810,7 +810,7 @@ class PDSignalApp:
                         ft.Column([
                             ft.Row([
                                 self.interval_field,
-                                ft.ElevatedButton("保存", on_click=self.save_intervals,
+                                ft.ElevatedButton("💾 保存", on_click=self.save_intervals,
                                                bgcolor=colors['primary'], color=ft.Colors.WHITE,
                                                height=40)
                             ], spacing=10),
@@ -822,7 +822,7 @@ class PDSignalApp:
                         ft.Column([
                             ft.Row([
                                 self.streamer_interval_field,
-                                ft.ElevatedButton("保存", on_click=self.save_intervals,
+                                ft.ElevatedButton("💾 保存", on_click=self.save_intervals,
                                                bgcolor=colors['primary'], color=ft.Colors.WHITE,
                                                height=40)
                             ], spacing=10),
@@ -839,10 +839,10 @@ class PDSignalApp:
                 # 添加主播区域
                 ft.Container(
                     content=ft.Column([
-                        ft.Text("添加主播", size=16, weight=ft.FontWeight.BOLD),
+                        ft.Text("➕ 添加主播", size=16, weight=ft.FontWeight.BOLD),
                         self.streamer_id_field,
                         self.streamer_remark_field,
-                        ft.ElevatedButton("添加", on_click=self.add_streamer,
+                        ft.ElevatedButton("➕ 添加", on_click=self.add_streamer,
                                        bgcolor=colors['success'], color=ft.Colors.WHITE,
                                        height=40)
                     ], spacing=8),
@@ -871,7 +871,7 @@ class PDSignalApp:
                 ft.Container(
                     content=ft.Column([
                         ft.Container(
-                            content=ft.Text("所有监控主播", size=14, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE),
+                            content=ft.Text("👥 所有监控主播", size=14, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE),
                             bgcolor=colors['primary'],
                             padding=10,
                             border_radius=ft.border_radius.only(top_left=10, top_right=10)
@@ -893,7 +893,7 @@ class PDSignalApp:
                 ft.Container(
                     content=ft.Column([
                         ft.Container(
-                            content=ft.Text("在线主播", size=14, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE),
+                            content=ft.Text("🟢 在线主播", size=14, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE),
                             bgcolor=ft.Colors.GREEN_600,
                             padding=10,
                             border_radius=ft.border_radius.only(top_left=10, top_right=10)
@@ -923,7 +923,7 @@ class PDSignalApp:
                 ft.Container(
                     content=ft.Column([
                         ft.Container(
-                            content=ft.Text("离线主播", size=14, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE),
+                            content=ft.Text("🔴 离线主播", size=14, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE),
                             bgcolor=ft.Colors.RED_600,
                             padding=10,
                             border_radius=ft.border_radius.only(top_left=10, top_right=10)
@@ -943,9 +943,9 @@ class PDSignalApp:
                 
                 # 日志区域
                 ft.Row([
-                    ft.Text("运行日志", size=16, weight=ft.FontWeight.BOLD, color=colors['primary']),
+                    ft.Text("📝 运行日志", size=16, weight=ft.FontWeight.BOLD, color=colors['primary']),
                     ft.Container(expand=True),
-                    ft.ElevatedButton("清空日志", on_click=self.clear_logs,
+                    ft.ElevatedButton("🗑️ 清空日志", on_click=self.clear_logs,
                                    bgcolor=colors['warning'], color=ft.Colors.WHITE,
                                    height=35)
                 ]),
