@@ -9,6 +9,7 @@ from datetime import datetime
 from database_manager import DatabaseManager
 from notification_manager import NotificationManager
 from panda_monitor import PandaLiveMonitor
+from user_settings import UserSettings
 
 class PDSignalApp:
     def __init__(self):
@@ -16,6 +17,7 @@ class PDSignalApp:
         self.db = DatabaseManager()
         self.notifier = NotificationManager()
         self.monitor = PandaLiveMonitor(self.db, self.notifier)
+        self.user_settings = UserSettings()
         
         # 配置logger
         self._setup_logger()
@@ -712,7 +714,7 @@ class PDSignalApp:
             return
         
         # 获取当前窗口高度
-        current_height = self.page.window_height
+        current_height = self.page.window.height
         self.window_height = current_height
         
         # 计算左侧配置面板的预估高度
@@ -742,17 +744,70 @@ class PDSignalApp:
         if self.page:
             self.page.update()
     
+    def save_window_settings(self):
+        """保存当前窗口设置"""
+        if not self.page:
+            return
+        
+        try:
+            # 获取当前窗口大小
+            width = self.page.window.width
+            height = self.page.window.height
+            
+            # 保存到用户设置
+            self.user_settings.set_window_size(width, height)
+            
+            print(f"[SETTINGS] 窗口设置已保存: {width}x{height}")
+        except Exception as e:
+            print(f"[ERROR] 保存窗口设置失败: {e}")
+    
+    def load_window_settings(self):
+        """加载保存的窗口设置"""
+        try:
+            # 获取保存的窗口大小
+            width, height = self.user_settings.get_window_size()
+            
+            # 设置窗口大小
+            if self.page:
+                self.page.window_width = width
+                self.page.window_height = height
+                
+                print(f"[SETTINGS] 窗口设置已加载: {width}x{height}")
+        except Exception as e:
+            print(f"[ERROR] 加载窗口设置失败: {e}")
+    
+    def on_window_event(self, e):
+        """窗口事件处理"""
+        if e.data == "close":
+            # 窗口关闭时保存设置（使用print避免UI更新）
+            try:
+                self.save_window_settings()
+            except Exception as ex:
+                print(f"保存窗口设置失败: {ex}")
+        elif e.data == "resize":
+            # 窗口大小改变时检查滚动需求
+            try:
+                self.check_window_scroll_needed()
+                if self.page:
+                    self.page.update()
+            except Exception as ex:
+                print(f"处理窗口大小改变失败: {ex}")
+    
     def build_ui(self, page: ft.Page):
         """构建用户界面"""
         self.page = page
         page.title = "PD Signal - PandaLive监控"
-        page.window_width = 1400
-        page.window_height = 900
         page.window_resizable = True
         page.padding = 0
         
-        # 设置窗口大小改变监听
-        page.on_window_event = self.on_window_resize
+        # 设置保存的窗口大小
+        if hasattr(self, '_pending_window_width') and hasattr(self, '_pending_window_height'):
+            page.window.width = self._pending_window_width
+            page.window.height = self._pending_window_height
+            print(f"[SETTINGS] 窗口大小已设置: {self._pending_window_width}x{self._pending_window_height}")
+        
+        # 设置窗口事件监听
+        page.on_window_event = self.on_window_event
         
         # 加载配置
         saved_cookie = self.monitor.get_cookie()
@@ -1139,7 +1194,50 @@ class PDSignalApp:
     
     def run(self):
         """运行应用"""
-        ft.app(target=self.build_ui)
+        try:
+            # 在创建应用之前加载窗口设置
+            self._load_window_settings_before_app()
+            
+            ft.app(target=self.build_ui)
+        except Exception as e:
+            print(f"程序运行出错: {e}")
+        finally:
+            # 程序退出时保存窗口设置（使用print避免UI更新）
+            try:
+                self.save_window_settings()
+            except Exception as e:
+                print(f"保存窗口设置时出错: {e}")
+    
+    def _load_window_settings_before_app(self):
+        """在应用创建之前加载窗口设置"""
+        try:
+            # 获取保存的窗口大小
+            width, height = self.user_settings.get_window_size()
+            print(f"[SETTINGS] 准备加载窗口设置: {width}x{height}")
+            
+            # 这里我们无法直接设置窗口大小，因为页面还没有创建
+            # 但我们可以保存这些值供后续使用
+            self._pending_window_width = width
+            self._pending_window_height = height
+            
+        except Exception as e:
+            print(f"[ERROR] 预加载窗口设置失败: {e}")
+            self._pending_window_width = 1400
+            self._pending_window_height = 900
+    
+    def cleanup(self):
+        """清理资源"""
+        try:
+            # 停止监控
+            if self.monitor.is_running:
+                self.monitor.stop_monitoring()
+            
+            # 保存窗口设置
+            self.save_window_settings()
+            
+            self.add_log_message("[CLEANUP] 程序清理完成")
+        except Exception as e:
+            print(f"清理资源时出错: {e}")
 
 def main():
     """主函数"""
