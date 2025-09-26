@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-GitHub Actions构建脚本
-用于在不同平台上构建PD-Signal应用程序
+GitHub Actions Build Script
+Cross-platform build script for PD-Signal application
 """
 
 import os
@@ -12,21 +12,21 @@ import shutil
 from pathlib import Path
 
 def log_info(message):
-    """输出信息日志"""
-    print(f"ℹ️  {message}")
+    """Output info log"""
+    print(f"[INFO] {message}")
 
 def log_error(message):
-    """输出错误日志"""
-    print(f"❌ {message}")
+    """Output error log"""
+    print(f"[ERROR] {message}")
 
 def log_success(message):
-    """输出成功日志"""
-    print(f"✅ {message}")
+    """Output success log"""
+    print(f"[SUCCESS] {message}")
 
 def run_command(cmd, description=""):
-    """运行命令并处理错误"""
+    """Run command and handle errors"""
     try:
-        log_info(f"运行命令: {cmd}")
+        log_info(f"Running command: {cmd}")
         result = subprocess.run(cmd, shell=True, check=True, capture_output=True, text=True)
         if result.stdout:
             print(result.stdout)
@@ -34,7 +34,7 @@ def run_command(cmd, description=""):
             log_success(description)
         return True
     except subprocess.CalledProcessError as e:
-        log_error(f"命令失败: {cmd}")
+        log_error(f"Command failed: {cmd}")
         if e.stdout:
             print("STDOUT:", e.stdout)
         if e.stderr:
@@ -42,32 +42,32 @@ def run_command(cmd, description=""):
         return False
 
 def check_dependencies():
-    """检查依赖项"""
-    log_info("检查依赖项...")
+    """Check dependencies"""
+    log_info("Checking dependencies...")
     
-    # 检查Python版本
+    # Check Python version
     python_version = sys.version_info
-    log_info(f"Python版本: {python_version.major}.{python_version.minor}.{python_version.micro}")
+    log_info(f"Python version: {python_version.major}.{python_version.minor}.{python_version.micro}")
     
     if python_version < (3, 8):
-        log_error("需要Python 3.8或更高版本")
+        log_error("Python 3.8 or higher required")
         return False
     
-    # 检查必要的包
+    # Check required packages
     required_packages = ['flet', 'requests', 'plyer', 'pyinstaller']
     for package in required_packages:
         try:
             __import__(package)
-            log_success(f"包 {package} 已安装")
+            log_success(f"Package {package} is installed")
         except ImportError:
-            log_error(f"包 {package} 未安装")
+            log_error(f"Package {package} is not installed")
             return False
     
     return True
 
 def clean_build_dirs():
-    """清理构建目录"""
-    log_info("清理构建目录...")
+    """Clean build directories"""
+    log_info("Cleaning build directories...")
     
     dirs_to_clean = ['build', 'dist', '__pycache__']
     files_to_clean = ['*.spec']
@@ -75,26 +75,26 @@ def clean_build_dirs():
     for dir_name in dirs_to_clean:
         if os.path.exists(dir_name):
             shutil.rmtree(dir_name)
-            log_success(f"已删除目录: {dir_name}")
+            log_success(f"Deleted directory: {dir_name}")
     
-    # 清理.spec文件
+    # Clean .spec files
     for spec_file in Path('.').glob('*.spec'):
         spec_file.unlink()
-        log_success(f"已删除文件: {spec_file}")
+        log_success(f"Deleted file: {spec_file}")
 
 def build_executable():
-    """构建可执行文件"""
-    log_info("开始构建可执行文件...")
+    """Build executable"""
+    log_info("Starting executable build...")
     
-    # 获取当前平台
+    # Get current platform
     current_platform = platform.system().lower()
-    log_info(f"当前平台: {current_platform}")
+    log_info(f"Current platform: {current_platform}")
     
-    # 构建PyInstaller命令
+    # Build PyInstaller command
     cmd_parts = [
         "pyinstaller",
-        "--onefile",  # 单文件模式
-        "--windowed",  # 无控制台窗口
+        "--onefile",  # Single file mode
+        "--windowed",  # No console window
         "--name", "PD-Signal",
         "--distpath", "dist/PD-Signal",
         "--workpath", "build",
@@ -102,13 +102,13 @@ def build_executable():
         "main.py"
     ]
     
-    # 添加平台特定的选项
+    # Add platform-specific options
     if current_platform == "windows":
         cmd_parts.extend([
             "--add-data", "usersetting.json;.",
             "--add-data", "sql;sql"
         ])
-    else:  # macOS和Linux
+    else:  # macOS and Linux
         cmd_parts.extend([
             "--add-data", "usersetting.json:.",
             "--add-data", "sql:sql"
@@ -116,114 +116,114 @@ def build_executable():
     
     cmd = " ".join(cmd_parts)
     
-    if not run_command(cmd, "PyInstaller构建完成"):
+    if not run_command(cmd, "PyInstaller build completed"):
         return False
     
-    # 检查构建结果
+    # Check build result
     if current_platform == "windows":
         exe_path = "dist/PD-Signal/PD-Signal.exe"
     else:
         exe_path = "dist/PD-Signal/PD-Signal"
     
     if not os.path.exists(exe_path):
-        log_error(f"可执行文件未找到: {exe_path}")
+        log_error(f"Executable not found: {exe_path}")
         return False
     
-    log_success(f"可执行文件已创建: {exe_path}")
+    log_success(f"Executable created: {exe_path}")
     
-    # 显示文件大小
+    # Show file size
     file_size = os.path.getsize(exe_path)
-    log_info(f"文件大小: {file_size / (1024*1024):.2f} MB")
+    log_info(f"File size: {file_size / (1024*1024):.2f} MB")
     
     return True
 
 def create_additional_files():
-    """创建额外的文件"""
-    log_info("创建额外文件...")
+    """Create additional files"""
+    log_info("Creating additional files...")
     
-    # 创建启动脚本
+    # Create startup script for Windows
     if platform.system().lower() == "windows":
         bat_content = """@echo off
-echo 启动PD-Signal...
+echo Starting PD-Signal...
 PD-Signal.exe
 pause
 """
         with open("dist/启动PD-Signal.bat", "w", encoding="utf-8") as f:
             f.write(bat_content)
-        log_success("已创建启动脚本: 启动PD-Signal.bat")
+        log_success("Created startup script: 启动PD-Signal.bat")
         
-        # 创建调试脚本
+        # Create debug script
         debug_content = """@echo off
-echo 调试模式启动PD-Signal...
+echo Starting PD-Signal in debug mode...
 PD-Signal.exe --debug
 pause
 """
         with open("dist/调试模式.bat", "w", encoding="utf-8") as f:
             f.write(debug_content)
-        log_success("已创建调试脚本: 调试模式.bat")
+        log_success("Created debug script: 调试模式.bat")
     
-    # 创建使用说明
-    readme_content = """# PD-Signal 使用说明
+    # Create readme
+    readme_content = """# PD-Signal Usage Instructions
 
-## 功能特点
-- 支持多主播同时监控
-- 实时开播/下播通知
-- Windows系统通知
-- 数据持久化存储
-- 现代化GUI界面
-- 配置自动保存
+## Features
+- Multi-streamer monitoring support
+- Real-time live/offline notifications
+- Windows system notifications
+- Persistent data storage
+- Modern GUI interface
+- Auto-save configuration
 
-## 使用方法
-1. 运行 PD-Signal.exe 启动程序
-2. 在界面中添加要监控的主播ID
-3. 设置监控间隔时间
-4. 点击"开始监控"按钮
+## Usage
+1. Run PD-Signal.exe to start the program
+2. Add streamer IDs to monitor in the interface
+3. Set monitoring interval
+4. Click "Start Monitoring" button
 
-## 注意事项
-- 首次使用需要设置Cookie
-- 建议设置合理的监控间隔（建议30秒以上）
-- 程序会自动保存配置
+## Notes
+- First use requires setting Cookie
+- Recommend reasonable monitoring interval (30+ seconds)
+- Program auto-saves configuration
 
-## 故障排除
-如果程序无法正常运行，请尝试：
-1. 检查网络连接
-2. 更新Cookie
-3. 使用调试模式查看详细错误信息
+## Troubleshooting
+If program fails to run properly, try:
+1. Check network connection
+2. Update Cookie
+3. Use debug mode for detailed error info
 """
     
     with open("dist/使用说明.txt", "w", encoding="utf-8") as f:
         f.write(readme_content)
-    log_success("已创建使用说明: 使用说明.txt")
+    log_success("Created readme: 使用说明.txt")
     
     return True
 
 def main():
-    """主函数"""
-    log_info("开始GitHub Actions构建流程...")
+    """Main function"""
+    log_info("Starting GitHub Actions build process...")
     
     try:
-        # 检查依赖项
+        # Check dependencies
         if not check_dependencies():
-            log_error("依赖项检查失败")
+            log_error("Dependency check failed")
             sys.exit(1)
         
-        # 清理构建目录
+        # Clean build directories
         clean_build_dirs()
         
-        # 构建可执行文件
+        # Build executable
         if not build_executable():
-            log_error("构建可执行文件失败")
+            log_error("Executable build failed")
             sys.exit(1)
         
-        # 创建额外文件
+        # Create additional files
         if not create_additional_files():
-            log_error("创建额外文件失败")
+            log_error("Additional files creation failed")
             sys.exit(1)
         
-        log_success("构建流程完成！")
+        log_success("Build process completed!")
         
     except Exception as e:
-        log_error(f"构建过程中发生错误: {str(e)}")
+        log_error(f"Error during build process: {str(e)}")
         import traceback
         traceback.print_exc()
         sys.exit(1)
