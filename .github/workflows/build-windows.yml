@@ -85,13 +85,7 @@ jobs:
         Copy-Item "project_overview.md" "release\PD-Signal\source\"
         
         # 创建版本信息文件
-        $versionInfo = @"
-PD Signal - PandaLive监控工具
-版本: 1.0.0
-构建时间: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
-构建环境: GitHub Actions
-Python版本: ${{ env.PYTHON_VERSION }}
-"@
+        $versionInfo = "PD Signal - PandaLive监控工具`n版本: 1.0.0`n构建时间: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')`n构建环境: GitHub Actions`nPython版本: ${{ env.PYTHON_VERSION }}"
         $versionInfo | Out-File -FilePath "release\PD-Signal\版本信息.txt" -Encoding UTF8
         
     - name: 上传构建产物
