@@ -28,6 +28,15 @@ jobs:
         pip install pyinstaller || { echo "❌ PyInstaller安装失败"; exit 1; }
         echo "✅ 依赖项安装完成"
         
+    - name: Clean previous builds
+      run: |
+        echo "🧹 清理之前的构建..."
+        if exist "build" rmdir /s /q "build"
+        if exist "dist" rmdir /s /q "dist"
+        if exist "*.spec" del /q "*.spec"
+        echo "✅ 清理完成"
+      shell: cmd
+        
     - name: Build executable
       run: |
         echo "🔨 开始构建可执行文件..."

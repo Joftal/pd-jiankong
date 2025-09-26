@@ -64,7 +64,9 @@ jobs:
         
     - name: Build executable
       run: |
-        python build_github_action.py
+        echo "🔨 开始构建可执行文件..."
+        python build_github_action.py || { echo "❌ 构建脚本失败"; exit 1; }
+        echo "✅ 构建完成"
         
     - name: Verify build output
       run: |
@@ -214,7 +216,9 @@ jobs:
         
     - name: Build executable
       run: |
-        python build_github_action.py
+        echo "🔨 开始构建可执行文件..."
+        python build_github_action.py || { echo "❌ 构建脚本失败"; exit 1; }
+        echo "✅ 构建完成"
         
     - name: Verify build output
       run: |
@@ -236,9 +240,7 @@ jobs:
         cp -r dist/PD-Signal/* release/PD-Signal-Linux/
         
         # Copy additional files
-        cp dist/启动PD-Signal.bat release/PD-Signal-Linux/ 2>/dev/null || true
-        cp dist/调试模式.bat release/PD-Signal-Linux/ 2>/dev/null || true
-        cp dist/使用说明.txt release/PD-Signal-Linux/
+        cp dist/使用说明.txt release/PD-Signal-Linux/ || echo "⚠️ 使用说明.txt未找到"
         
         # Copy source code
         mkdir -p release/PD-Signal-Linux/source
