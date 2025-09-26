@@ -5,6 +5,7 @@ import time
 import logging
 import os
 import sys
+import socket
 from datetime import datetime
 from database_manager import DatabaseManager
 from notification_manager import NotificationManager
@@ -1239,10 +1240,41 @@ class PDSignalApp:
         except Exception as e:
             print(f"清理资源时出错: {e}")
 
+def check_single_instance():
+    """检查是否已有实例在运行"""
+    try:
+        # 尝试绑定到一个本地端口
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(1)
+        sock.bind(('localhost', 12345))  # 使用固定端口
+        sock.listen(1)
+        return True  # 成功绑定，说明没有其他实例
+    except socket.error:
+        return False  # 绑定失败，说明已有实例在运行
+    finally:
+        try:
+            sock.close()
+        except:
+            pass
+
 def main():
     """主函数"""
-    app = PDSignalApp()
-    app.run()
+    # 检查单实例
+    if not check_single_instance():
+        print("❌ 程序已在运行中，请勿重复启动！")
+        print("💡 如果确定没有其他实例在运行，请等待几秒后重试")
+        input("按回车键退出...")
+        sys.exit(1)
+    
+    print("✅ 单实例检查通过，正在启动程序...")
+    
+    try:
+        app = PDSignalApp()
+        app.run()
+    except Exception as e:
+        print(f"❌ 程序启动失败: {e}")
+        input("按回车键退出...")
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()

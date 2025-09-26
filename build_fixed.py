@@ -71,10 +71,10 @@ def build_executable():
     """构建可执行文件"""
     print("🔨 开始构建可执行文件...")
     
-    # PyInstaller 命令参数 - 修复版（简化）
+    # PyInstaller 命令参数 - 修复版（包含所有依赖）
     cmd = [
         "pyinstaller",
-        "--onefile",                    # 打包成单个文件
+        "--onedir",                     # 打包成目录（包含所有依赖）
         "--windowed",                   # Windows下不显示控制台
         "--name=PD-Signal",             # 可执行文件名称
         "--distpath=dist",              # 输出目录
@@ -87,6 +87,49 @@ def build_executable():
         "--collect-all=requests",       # 收集requests的所有模块
         "--collect-all=plyer",          # 收集plyer的所有模块
         "--collect-all=unicodedata",    # 收集Unicode数据支持
+        "--collect-all=sqlite3",        # 收集sqlite3的所有模块
+        "--collect-all=asyncio",        # 收集asyncio的所有模块
+        "--collect-all=threading",      # 收集threading的所有模块
+        "--collect-all=logging",        # 收集logging的所有模块
+        "--collect-all=json",           # 收集json的所有模块
+        "--collect-all=datetime",       # 收集datetime的所有模块
+        "--collect-all=pathlib",        # 收集pathlib的所有模块
+        "--collect-all=platform",       # 收集platform的所有模块
+        "--collect-all=webbrowser",     # 收集webbrowser的所有模块
+        "--collect-all=typing",         # 收集typing的所有模块
+        "--collect-all=collections",    # 收集collections的所有模块
+        "--collect-all=functools",      # 收集functools的所有模块
+        "--collect-all=itertools",      # 收集itertools的所有模块
+        "--collect-all=operator",       # 收集operator的所有模块
+        "--collect-all=re",             # 收集re的所有模块
+        "--collect-all=sys",            # 收集sys的所有模块
+        "--collect-all=traceback",      # 收集traceback的所有模块
+        "--collect-all=warnings",       # 收集warnings的所有模块
+        "--collect-all=weakref",        # 收集weakref的所有模块
+        "--collect-all=copy",           # 收集copy的所有模块
+        "--collect-all=pickle",         # 收集pickle的所有模块
+        "--collect-all=io",             # 收集io的所有模块
+        "--collect-all=base64",         # 收集base64的所有模块
+        "--collect-all=hashlib",        # 收集hashlib的所有模块
+        "--collect-all=hmac",           # 收集hmac的所有模块
+        "--collect-all=ssl",            # 收集ssl的所有模块
+        "--collect-all=socket",         # 收集socket的所有模块
+        "--collect-all=http",           # 收集http的所有模块
+        "--collect-all=email",          # 收集email的所有模块
+        "--collect-all=mimetypes",      # 收集mimetypes的所有模块
+        "--collect-all=tempfile",       # 收集tempfile的所有模块
+        "--collect-all=shutil",         # 收集shutil的所有模块
+        "--collect-all=glob",           # 收集glob的所有模块
+        "--collect-all=fnmatch",        # 收集fnmatch的所有模块
+        "--collect-all=stat",           # 收集stat的所有模块
+        "--collect-all=subprocess",     # 收集subprocess的所有模块
+        "--collect-all=signal",         # 收集signal的所有模块
+        "--collect-all=atexit",         # 收集atexit的所有模块
+        "--collect-all=contextlib",     # 收集contextlib的所有模块
+        "--collect-all=inspect",        # 收集inspect的所有模块
+        "--collect-all=importlib",      # 收集importlib的所有模块
+        "--collect-all=pkg_resources",  # 收集pkg_resources的所有模块
+        "--collect-all=setuptools",     # 收集setuptools的所有模块
     ]
     
     # 添加图标
@@ -218,15 +261,29 @@ def main():
     print(f"[FOLDER] 输出目录: {Path('dist').absolute()}")
     print("[LIST] 输出文件:")
     
-    for file in Path("dist").iterdir():
-        if file.is_file():
-            size = file.stat().st_size / 1024 / 1024  # MB
-            print(f"   - {file.name} ({size:.1f} MB)")
+    # 列出dist目录中的所有内容
+    dist_path = Path("dist")
+    if dist_path.exists():
+        for item in dist_path.iterdir():
+            if item.is_file():
+                size = item.stat().st_size / 1024 / 1024  # MB
+                print(f"   - {item.name} ({size:.1f} MB)")
+            elif item.is_dir():
+                print(f"   - {item.name}/ (目录)")
+                # 列出目录中的主要文件
+                try:
+                    for subitem in item.iterdir():
+                        if subitem.is_file():
+                            size = subitem.stat().st_size / 1024 / 1024  # MB
+                            print(f"     - {subitem.name} ({size:.1f} MB)")
+                except PermissionError:
+                    print(f"     - (无法访问目录内容)")
     
     print("\n[TIP] 提示:")
-    print("   - 运行 PD-Signal.exe 启动程序")
-    print("   - 阅读 使用说明.txt 了解详细使用方法")
-    print("   - 此版本已修复无限循环创建进程的问题")
+    print("   - 运行 dist/PD-Signal/PD-Signal.exe 启动程序")
+    print("   - 阅读 dist/使用说明.txt 了解详细使用方法")
+    print("   - 此版本包含所有依赖文件，确保程序正常运行")
+    print("   - 已修复无限循环创建进程的问题")
 
 if __name__ == "__main__":
     main()

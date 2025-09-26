@@ -65,10 +65,19 @@ jobs:
     - name: 验证构建结果
       shell: pwsh
       run: |
-        if (Test-Path "dist\PD-Signal.exe") {
+        if (Test-Path "dist\PD-Signal\PD-Signal.exe") {
           Write-Output "✅ Windows可执行文件构建成功"
-          $fileSize = (Get-Item "dist\PD-Signal.exe").Length / 1MB
+          $fileSize = (Get-Item "dist\PD-Signal\PD-Signal.exe").Length / 1MB
           Write-Output "文件大小: $([math]::Round($fileSize, 2)) MB"
+          
+          # 检查_internal文件夹是否存在
+          if (Test-Path "dist\PD-Signal\_internal") {
+            Write-Output "✅ _internal依赖文件夹存在"
+            $internalSize = (Get-ChildItem "dist\PD-Signal\_internal" -Recurse | Measure-Object -Property Length -Sum).Sum / 1MB
+            Write-Output "_internal文件夹大小: $([math]::Round($internalSize, 2)) MB"
+          } else {
+            Write-Output "⚠️ _internal依赖文件夹不存在"
+          }
         } else {
           Write-Output "❌ Windows可执行文件构建失败"
           exit 1
@@ -81,9 +90,11 @@ jobs:
         if (Test-Path $releaseDir) { Remove-Item -Recurse -Force $releaseDir }
         New-Item -ItemType Directory $releaseDir
         
-        # 复制主要文件
-        Copy-Item "dist\PD-Signal.exe" "$releaseDir\"
-        Copy-Item "dist\使用说明.txt" "$releaseDir\"
+        # 复制整个PD-Signal目录（包含所有依赖）
+        Copy-Item "dist\PD-Signal" "$releaseDir\" -Recurse
+        
+        # 复制使用说明
+        Copy-Item "dist\使用说明.txt" "$releaseDir\" -ErrorAction SilentlyContinue
         
         # 复制源码和文档
         New-Item -ItemType Directory "$releaseDir\source"
@@ -93,7 +104,7 @@ jobs:
         Copy-Item "project_overview.md" "$releaseDir\source\"
         
         # 创建版本信息
-        $versionInfo = "PD Signal - PandaLive监控工具`n版本: ${{ env.BUILD_VERSION }}`n构建时间: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')`n构建环境: GitHub Actions Windows`nPython版本: ${{ env.PYTHON_VERSION }}`nGit提交: ${{ github.sha }}"
+        $versionInfo = "PD Signal - PandaLive监控工具`n版本: ${{ env.BUILD_VERSION }}`n构建时间: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')`n构建环境: GitHub Actions Windows`nPython版本: ${{ env.PYTHON_VERSION }}`nGit提交: ${{ github.sha }}`n`n📁 文件结构:`n- PD-Signal.exe (主程序)`n- _internal/ (所有依赖文件)`n- 使用说明.txt (使用说明)`n- source/ (源代码)`n`n💡 使用说明:`n1. 直接运行 PD-Signal.exe 启动程序`n2. 程序包含所有依赖，无需额外安装`n3. 已修复重复创建进程的问题`n4. 支持单实例运行，避免多开"
         $versionInfo | Out-File -FilePath "$releaseDir\版本信息.txt" -Encoding UTF8
         
     - name: 验证发布文件存在
@@ -101,7 +112,7 @@ jobs:
       run: |
         Write-Output "=== 验证发布文件 ==="
         $files = @(
-          "dist\PD-Signal.exe",
+          "dist\PD-Signal\PD-Signal.exe",
           "dist\使用说明.txt",
           "release\PD-Signal-Windows\版本信息.txt"
         )
@@ -121,7 +132,7 @@ jobs:
       uses: softprops/action-gh-release@v1
       with:
         files: |
-          dist/PD-Signal.exe
+          dist/PD-Signal/PD-Signal.exe
           dist/使用说明.txt
           release/PD-Signal-Windows/版本信息.txt
         generate_release_notes: true
