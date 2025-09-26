@@ -26,11 +26,11 @@ jobs:
         echo "Python版本:"
         python --version
         echo "Python路径:"
-        which python || where python
+        where python
         echo "当前工作目录:"
-        pwd
+        cd
         echo "文件列表:"
-        ls -la || dir
+        dir
         echo "✅ 环境调试完成"
         
     - name: Cache pip dependencies
