@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-构建脚本 - 将Python应用打包为可执行文件
-使用PyInstaller进行打包
+修复版构建脚本 - 解决PD-Signal.exe无限循环创建进程的问题
+使用PyInstaller进行打包，包含所有必要的依赖
 """
 
 import os
@@ -63,7 +63,7 @@ def create_icon():
     """创建应用图标（如果不存在）"""
     icon_path = Path("icon.ico")
     if not icon_path.exists():
-        print("[WARNING]  未找到icon.ico，将使用默认图标")
+        print("[WARNING] 未找到icon.ico，将使用默认图标")
         return None
     return str(icon_path)
 
@@ -71,7 +71,7 @@ def build_executable():
     """构建可执行文件"""
     print("🔨 开始构建可执行文件...")
     
-    # PyInstaller 命令参数
+    # PyInstaller 命令参数 - 修复版（简化）
     cmd = [
         "pyinstaller",
         "--onefile",                    # 打包成单个文件
@@ -82,13 +82,10 @@ def build_executable():
         "--clean",                      # 清理临时文件
         "--noconfirm",                  # 不询问确认
         "--log-level=INFO",             # 设置日志级别
+        "--noupx",                      # 禁用UPX压缩，避免兼容性问题
         "--collect-all=flet",           # 收集flet的所有模块
         "--collect-all=requests",       # 收集requests的所有模块
         "--collect-all=plyer",          # 收集plyer的所有模块
-        "--collect-all=urllib3",        # 收集urllib3的所有模块
-        "--collect-all=certifi",        # 收集certifi的所有模块
-        "--collect-all=charset_normalizer", # 收集charset_normalizer的所有模块
-        "--collect-all=idna",           # 收集idna的所有模块
     ]
     
     # 添加图标
@@ -101,88 +98,18 @@ def build_executable():
         "--add-data", "requirements.txt;.",
     ])
     
-    # 隐藏导入
+    # 隐藏导入 - 精简版，只包含必要的
     hidden_imports = [
         "sqlite3",
         "plyer.platforms.win.notification",
         "plyer.platforms.win",
         "plyer.platforms",
         "flet.core",
-        "flet.core.types",
-        "flet.core.event",
-        "flet.core.control",
-        "flet.core.control_event",
-        "flet.core.ref",
-        "flet.core.utils",
         "requests",
-        "requests.adapters",
-        "requests.auth",
-        "requests.cookies",
-        "requests.exceptions",
-        "requests.models",
-        "requests.sessions",
-        "requests.utils",
         "urllib3",
-        "urllib3.util",
-        "urllib3.util.retry",
-        "urllib3.util.connection",
-        "urllib3.poolmanager",
         "certifi",
         "charset_normalizer",
-        "idna",
-        "json",
-        "asyncio",
-        "threading",
-        "time",
-        "logging",
-        "os",
-        "datetime",
-        "pathlib",
-        "platform",
-        "webbrowser",
-        "typing",
-        "collections",
-        "functools",
-        "itertools",
-        "operator",
-        "re",
-        "sys",
-        "traceback",
-        "warnings",
-        "weakref",
-        "copy",
-        "pickle",
-        "io",
-        "base64",
-        "hashlib",
-        "hmac",
-        "ssl",
-        "socket",
-        "http",
-        "http.client",
-        "http.cookies",
-        "http.server",
-        "email",
-        "email.mime",
-        "email.mime.text",
-        "email.mime.multipart",
-        "email.utils",
-        "mimetypes",
-        "tempfile",
-        "shutil",
-        "glob",
-        "fnmatch",
-        "stat",
-        "subprocess",
-        "signal",
-        "atexit",
-        "contextlib",
-        "inspect",
-        "importlib",
-        "importlib.util",
-        "importlib.metadata",
-        "pkg_resources",
-        "setuptools"
+        "idna"
     ]
     
     for import_name in hidden_imports:
@@ -266,7 +193,7 @@ def create_readme():
 2. 网络连接是否正常
 3. 主播ID是否正确
 
-版本: 1.0.0
+版本: 1.0.0 (修复版)
 构建时间: {build_time}
 """
     
@@ -280,7 +207,7 @@ def create_readme():
 
 def main():
     """主函数"""
-    print("[START] PD Signal 构建工具")
+    print("[START] PD Signal 修复版构建工具")
     print("=" * 50)
     
     # 检查依赖
@@ -314,6 +241,7 @@ def main():
     print("   - 运行 PD-Signal.exe 启动程序")
     print("   - 使用 启动PD-Signal.bat 可以看到控制台输出")
     print("   - 阅读 使用说明.txt 了解详细使用方法")
+    print("   - 此版本已修复无限循环创建进程的问题")
 
 if __name__ == "__main__":
     main()
