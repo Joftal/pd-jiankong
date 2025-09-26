@@ -69,8 +69,28 @@ class DatabaseManager:
             # 字段已存在，忽略错误
             pass
         
+        # 初始化默认配置
+        self._init_default_configs(cursor)
+        
         conn.commit()
         conn.close()
+    
+    def _init_default_configs(self, cursor):
+        """初始化默认配置"""
+        default_configs = {
+            'cookie': '',
+            'check_interval': '2',
+            'main_interval': '60',
+            'streamer_interval': '5',
+            'theme': 'dark',
+            'proxy_enabled': 'false',
+            'proxy_url': ''
+        }
+        
+        for key, value in default_configs.items():
+            cursor.execute('SELECT * FROM config WHERE key = ?', (key,))
+            if not cursor.fetchone():
+                cursor.execute('INSERT INTO config (key, value) VALUES (?, ?)', (key, value))
     
     def add_vtb_to_watch(self, mid: str, username: str, usernick: str = "", 
                         live_status: str = "", title: str = "", platform: str = "panda", hls: str = "", remark: str = "") -> bool:

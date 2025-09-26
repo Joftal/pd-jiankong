@@ -35,11 +35,14 @@ class PDSignalApp:
         self.start_stop_btn = None
         self.log_container = None
         self.theme_btn = None
+        self.proxy_enabled_field = None
+        self.proxy_url_field = None
         
         # 状态
         self.log_messages = []
         self.max_log_messages = 100
         self.is_dark_theme = True  # 默认暗色主题
+        self.window_height = 900  # 默认窗口高度
         
         # 设置监控状态回调
         self.monitor.add_status_callback(self.on_monitor_status_change)
@@ -562,6 +565,33 @@ class PDSignalApp:
             self.add_log_message("[ERROR] 间隔设置保存失败: 输入格式错误")
             self.show_snackbar("请输入有效的数字", ft.Colors.RED)
     
+    def save_proxy_settings(self, e):
+        """保存代理设置"""
+        try:
+            proxy_enabled = self.proxy_enabled_field.value if self.proxy_enabled_field else False
+            proxy_url = self.proxy_url_field.value.strip() if self.proxy_url_field else ""
+            
+            # 验证代理URL格式
+            if proxy_enabled and proxy_url:
+                if not proxy_url.startswith(('http://', 'https://')):
+                    proxy_url = f"http://{proxy_url}"
+                
+                # 简单验证URL格式
+                if '://' not in proxy_url or '.' not in proxy_url.split('://')[1]:
+                    self.add_log_message("[ERROR] 代理URL格式不正确")
+                    self.show_snackbar("代理URL格式不正确", ft.Colors.RED)
+                    return
+            
+            self.monitor.set_proxy(proxy_enabled, proxy_url)
+            status_text = "启用" if proxy_enabled else "禁用"
+            proxy_info = f" ({proxy_url})" if proxy_enabled and proxy_url else ""
+            self.add_log_message(f"[SETTINGS] 代理设置已保存: {status_text}{proxy_info}")
+            self.show_snackbar("代理设置已保存", ft.Colors.GREEN)
+        except Exception as ex:
+            error_msg = f"代理设置保存失败: {str(ex)}"
+            self.add_log_message(f"[ERROR] {error_msg}")
+            self.show_snackbar(error_msg, ft.Colors.RED)
+    
     def show_snackbar(self, message: str, color):
         """显示消息条"""
         if self.page:
@@ -607,6 +637,15 @@ class PDSignalApp:
         if self.streamer_interval_field:
             saved_streamer_interval = self.db.get_config("streamer_interval", "5")
             self.streamer_interval_field.value = saved_streamer_interval
+        
+        # 恢复代理设置
+        if self.proxy_enabled_field:
+            saved_proxy_enabled = self.db.get_config("proxy_enabled", "false").lower() == "true"
+            self.proxy_enabled_field.value = saved_proxy_enabled
+        
+        if self.proxy_url_field:
+            saved_proxy_url = self.db.get_config("proxy_url", "")
+            self.proxy_url_field.value = saved_proxy_url
         
         # 恢复监控状态
         self.update_status_display()
@@ -667,6 +706,42 @@ class PDSignalApp:
         self.update_log_display()
         self.page.update()
     
+    def check_window_scroll_needed(self):
+        """检查是否需要启用窗口滚动"""
+        if not self.page:
+            return
+        
+        # 获取当前窗口高度
+        current_height = self.page.window_height
+        self.window_height = current_height
+        
+        # 计算左侧配置面板的预估高度
+        # Cookie区域: ~120px
+        # 监控设置区域: ~200px  
+        # 代理设置区域: ~150px
+        # 添加主播区域: ~150px
+        # 总高度约: 620px
+        config_panel_height = 620
+        
+        # 如果窗口高度小于配置面板高度 + 顶部标题栏(80px) + 状态栏(60px) + 底部边距(40px)
+        min_required_height = config_panel_height + 180
+        
+        if current_height < min_required_height:
+            # 启用页面滚动
+            self.page.scroll = ft.ScrollMode.AUTO
+            self.add_log_message(f"[WINDOW] 窗口高度({current_height}px)不足，已启用滚动模式")
+            self.add_log_message(f"[WINDOW] 建议最小高度: {min_required_height}px")
+        else:
+            # 禁用页面滚动
+            self.page.scroll = ft.ScrollMode.HIDDEN
+            self.add_log_message(f"[WINDOW] 窗口高度({current_height}px)充足，已禁用滚动模式")
+    
+    def on_window_resize(self, e):
+        """窗口大小改变时的回调"""
+        self.check_window_scroll_needed()
+        if self.page:
+            self.page.update()
+    
     def build_ui(self, page: ft.Page):
         """构建用户界面"""
         self.page = page
@@ -676,12 +751,17 @@ class PDSignalApp:
         page.window_resizable = True
         page.padding = 0
         
+        # 设置窗口大小改变监听
+        page.on_window_event = self.on_window_resize
+        
         # 加载配置
         saved_cookie = self.monitor.get_cookie()
         saved_check_interval = self.db.get_config("check_interval", "2")
         saved_main_interval = self.db.get_config("main_interval", "60")
         saved_streamer_interval = self.db.get_config("streamer_interval", "5")
         saved_theme = self.db.get_config("theme", "dark")
+        saved_proxy_enabled = self.db.get_config("proxy_enabled", "false").lower() == "true"
+        saved_proxy_url = self.db.get_config("proxy_url", "")
         self.is_dark_theme = saved_theme == "dark"
         
         # 设置主题模式（在加载配置后）
@@ -779,6 +859,20 @@ class PDSignalApp:
             border_radius=8
         )
         
+        # 代理设置
+        self.proxy_enabled_field = ft.Checkbox(
+            label="启用代理",
+            value=saved_proxy_enabled
+        )
+        
+        self.proxy_url_field = ft.TextField(
+            label="代理地址",
+            hint_text="例如: 127.0.0.1:8080 或 http://127.0.0.1:8080",
+            value=saved_proxy_url,
+            expand=True,
+            border_radius=8
+        )
+        
         config_panel = ft.Container(
             content=ft.Column([
                 # Cookie区域
@@ -839,6 +933,24 @@ class PDSignalApp:
                                    size=11, color=colors['text_secondary'])
                         ], spacing=5)
                     ], spacing=15),
+                    bgcolor=colors['surface'],
+                    padding=15,
+                    border_radius=10,
+                    margin=ft.margin.only(bottom=10)
+                ),
+                
+                # 代理设置区域
+                ft.Container(
+                    content=ft.Column([
+                        ft.Text("🌐 代理设置", size=16, weight=ft.FontWeight.BOLD),
+                        self.proxy_enabled_field,
+                        self.proxy_url_field,
+                        ft.ElevatedButton("💾 保存", on_click=self.save_proxy_settings,
+                                       bgcolor=colors['primary'], color=ft.Colors.WHITE,
+                                       height=40),
+                        ft.Text("代理设置用于解决海外用户网络访问问题", 
+                               size=11, color=colors['text_secondary'])
+                    ], spacing=8),
                     bgcolor=colors['surface'],
                     padding=15,
                     border_radius=10,
@@ -1008,9 +1120,20 @@ class PDSignalApp:
         else:
             self.add_log_message("[WARNING] 请设置PandaLive Cookie")
         
+        # 检查代理状态
+        proxy_status = self.monitor.get_monitoring_status()
+        if proxy_status.get('proxy_enabled'):
+            proxy_url = proxy_status.get('proxy_url', '')
+            self.add_log_message(f"[PROXY] 代理已启用: {proxy_url}")
+        else:
+            self.add_log_message("[PROXY] 代理未启用")
+        
         # 检查监控列表
         watched_count = len(self.db.get_all_watched_vtbs())
         self.add_log_message(f"[LIST] 当前监控主播数量: {watched_count}")
+        
+        # 检查窗口滚动需求
+        self.check_window_scroll_needed()
         
         page.update()
     

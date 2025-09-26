@@ -26,6 +26,10 @@ class PandaLiveMonitor:
         self.cached_data = {}
         self.status_callbacks = []  # 状态回调函数列表
         
+        # 代理设置
+        self.proxy_enabled = self.db.get_config("proxy_enabled", "false").lower() == "true"
+        self.proxy_url = self.db.get_config("proxy_url", "")
+        
         # 配置logger
         self._setup_logger()
     
@@ -90,6 +94,25 @@ class PandaLiveMonitor:
         self.db.set_config("main_interval", str(self.main_interval))
         self.db.set_config("streamer_interval", str(self.streamer_interval))
     
+    def set_proxy(self, enabled: bool, proxy_url: str = ""):
+        """设置代理"""
+        self.proxy_enabled = enabled
+        self.proxy_url = proxy_url.strip()
+        self.db.set_config("proxy_enabled", "true" if enabled else "false")
+        self.db.set_config("proxy_url", self.proxy_url)
+    
+    def get_proxy_config(self) -> dict:
+        """获取代理配置"""
+        if self.proxy_enabled and self.proxy_url:
+            # 确保代理URL以http://开头
+            if not self.proxy_url.startswith(('http://', 'https://')):
+                self.proxy_url = f"http://{self.proxy_url}"
+            return {
+                'http': self.proxy_url,
+                'https': self.proxy_url
+            }
+        return {}
+    
     def add_status_callback(self, callback: Callable):
         """添加状态回调函数"""
         self.status_callbacks.append(callback)
@@ -120,7 +143,12 @@ class PandaLiveMonitor:
             self._notify_status_change(f"[WEB] 正在请求API: offset={offset}, limit={limit}")
             start_time = time.time()
             
-            response = requests.get(url, params=params, headers=headers, timeout=5)
+            # 获取代理配置
+            proxies = self.get_proxy_config()
+            if proxies:
+                self._notify_status_change(f"[PROXY] 使用代理: {self.proxy_url}")
+            
+            response = requests.get(url, params=params, headers=headers, proxies=proxies, timeout=5)
             response.raise_for_status()
             
             request_time = time.time() - start_time
@@ -156,7 +184,12 @@ class PandaLiveMonitor:
             self._notify_status_change(f"[SEARCH] 正在获取主播 {mid} 的详细信息")
             start_time = time.time()
             
-            response = requests.post(url, data=data, headers=headers, timeout=5)
+            # 获取代理配置
+            proxies = self.get_proxy_config()
+            if proxies:
+                self._notify_status_change(f"[PROXY] 使用代理: {self.proxy_url}")
+            
+            response = requests.post(url, data=data, headers=headers, proxies=proxies, timeout=5)
             response.raise_for_status()
             
             request_time = time.time() - start_time
@@ -561,5 +594,7 @@ class PandaLiveMonitor:
             'check_interval': self.check_interval,
             'main_interval': self.main_interval,
             'streamer_interval': self.streamer_interval,
-            'has_cookie': bool(self.get_cookie() and self.get_cookie() != "Your Cookie")
+            'has_cookie': bool(self.get_cookie() and self.get_cookie() != "Your Cookie"),
+            'proxy_enabled': self.proxy_enabled,
+            'proxy_url': self.proxy_url
         }
