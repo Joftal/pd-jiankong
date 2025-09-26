@@ -57,7 +57,7 @@ jobs:
       shell: pwsh
       run: |
         Write-Output "开始构建..."
-        python build.py
+        python build_fixed.py
         
     - name: 验证构建结果
       shell: pwsh

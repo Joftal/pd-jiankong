@@ -1,0 +1,204 @@
+name: 修复版构建 (Fixed Build)
+
+on:
+  push:
+    branches: [ main, master, Cookie, fix ]
+    tags: [ 'v*', 'fix-*' ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:  # 允许手动触发
+    inputs:
+      use_fixed_build:
+        description: '使用修复版构建脚本'
+        required: true
+        default: true
+        type: boolean
+
+env:
+  PYTHON_VERSION: '3.11'
+  BUILD_VERSION: ${{ github.ref_name || 'dev' }}
+
+jobs:
+  build-fixed-windows:
+    runs-on: windows-latest
+    
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v4
+      
+    - name: 设置Python环境
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
+        
+    - name: 设置UTF-8编码环境
+      run: echo PYTHONIOENCODING=utf-8 >> $env:GITHUB_ENV
+        
+    - name: 安装系统依赖
+      run: |
+        # 安装Windows构建工具
+        python -m pip install --upgrade pip
+        python -m pip install wheel setuptools
+        
+    - name: 安装Python依赖
+      run: |
+        python -m pip install -r requirements.txt
+        python -m pip install pyinstaller
+        
+    - name: 验证依赖安装
+      run: |
+        python -c "import flet; print('Flet版本:', flet.__version__)"
+        python -c "import requests; print('Requests版本:', requests.__version__)"
+        python -c "import plyer; print('Plyer已安装')"
+        python -c "import urllib3; print('urllib3版本:', urllib3.__version__)"
+        python -c "import certifi; print('certifi已安装')"
+        python -c "import charset_normalizer; print('charset_normalizer已安装')"
+        python -c "import idna; print('idna版本:', idna.__version__)"
+        pyinstaller --version
+        
+    - name: 清理旧的构建文件
+      run: |
+        if (Test-Path "build") { Remove-Item -Recurse -Force "build" }
+        if (Test-Path "dist") { Remove-Item -Recurse -Force "dist" }
+        if (Test-Path "*.spec") { Remove-Item -Force "*.spec" }
+        
+    - name: 构建可执行文件 (修复版)
+      shell: pwsh
+      run: |
+        Write-Output "🔧 使用修复版构建脚本..."
+        Write-Output "修复内容:"
+        Write-Output "  - 添加了完整的依赖包收集"
+        Write-Output "  - 优化了隐藏导入配置"
+        Write-Output "  - 禁用了UPX压缩避免兼容性问题"
+        Write-Output "  - 解决了无限循环创建进程的问题"
+        Write-Output ""
+        python build_fixed.py
+        
+    - name: 验证构建结果
+      shell: pwsh
+      run: |
+        if (Test-Path "dist\PD-Signal.exe") {
+          Write-Output "✅ 修复版可执行文件构建成功"
+          $fileSize = (Get-Item "dist\PD-Signal.exe").Length / 1MB
+          Write-Output "文件大小: $([math]::Round($fileSize, 2)) MB"
+          
+          # 检查文件是否可执行
+          $fileInfo = Get-Item "dist\PD-Signal.exe"
+          Write-Output "文件版本: $($fileInfo.VersionInfo.FileVersion)"
+          Write-Output "创建时间: $($fileInfo.CreationTime)"
+          Write-Output "修改时间: $($fileInfo.LastWriteTime)"
+        } else {
+          Write-Output "❌ 修复版可执行文件构建失败"
+          exit 1
+        }
+        
+    - name: 创建修复版发布包
+      run: |
+        # 创建发布目录
+        $releaseDir = "release\PD-Signal-Fixed"
+        if (Test-Path $releaseDir) { Remove-Item -Recurse -Force $releaseDir }
+        New-Item -ItemType Directory $releaseDir
+        
+        # 复制主要文件
+        Copy-Item "dist\PD-Signal.exe" "$releaseDir\"
+        Copy-Item "dist\启动PD-Signal.bat" "$releaseDir\"
+        Copy-Item "dist\使用说明.txt" "$releaseDir\"
+        
+        # 复制源码和文档
+        New-Item -ItemType Directory "$releaseDir\source"
+        Copy-Item "*.py" "$releaseDir\source\"
+        Copy-Item "requirements.txt" "$releaseDir\source\"
+        Copy-Item "README_CN.md" "$releaseDir\source\"
+        Copy-Item "project_overview.md" "$releaseDir\source\"
+        
+        # 创建修复说明
+        $fixInfo = "PD Signal - PandaLive监控工具 (修复版)`n版本: ${{ env.BUILD_VERSION }}`n构建时间: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')`n构建环境: GitHub Actions Windows (修复版)`nPython版本: ${{ env.PYTHON_VERSION }}`nGit提交: ${{ github.sha }}`n`n🔧 修复内容:`n- 解决了无限循环创建进程的问题`n- 添加了完整的依赖包收集`n- 优化了隐藏导入配置`n- 禁用了UPX压缩避免兼容性问题`n- 精简了构建参数避免命令过长`n`n✅ 修复效果:`n- 程序可以正常启动和运行`n- 不再出现无限循环创建进程`n- 包含所有必要的依赖包`n- 构建过程更加稳定可靠"
+        $fixInfo | Out-File -FilePath "$releaseDir\修复说明.txt" -Encoding UTF8
+        
+        # 创建安装说明
+        $installGuide = "# PD Signal 修复版安装说明`n`n## 🎉 修复内容`n- ✅ 解决了无限循环创建进程的问题`n- ✅ 添加了完整的依赖包收集`n- ✅ 优化了隐藏导入配置`n- ✅ 禁用了UPX压缩避免兼容性问题`n`n## 系统要求`n- Windows 10/11 (64位)`n- 无需安装Python或其他依赖`n`n## 安装步骤`n1. 下载 PD-Signal.exe`n2. 双击运行即可`n3. 首次使用请设置PandaLive Cookie`n`n## 使用说明`n- 详细说明请查看`"使用说明.txt`"`n- 修复详情请查看`"修复说明.txt`"`n`n## 技术支持`n- GitHub: ${{ github.repository }}`n- 提交: ${{ github.sha }}`n- 修复版本: ${{ env.BUILD_VERSION }}"
+        $installGuide | Out-File -FilePath "$releaseDir\安装说明.md" -Encoding UTF8
+        
+    - name: 上传修复版构建产物
+      uses: actions/upload-artifact@v4
+      with:
+        name: PD-Signal-Fixed-${{ github.run_number }}
+        path: |
+          dist/
+          release/PD-Signal-Fixed/
+        retention-days: 30
+        
+    - name: 创建发布 (仅标签推送时)
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          dist/PD-Signal.exe
+          dist/启动PD-Signal.bat
+          dist/使用说明.txt
+          release/PD-Signal-Fixed/修复说明.txt
+          release/PD-Signal-Fixed/安装说明.md
+        generate_release_notes: true
+        draft: false
+        prerelease: false
+        body: |
+          ## PD Signal 修复版 v${{ github.ref_name }}
+          
+          ### 🔧 修复内容
+          - ✅ **解决了无限循环创建进程的问题**
+          - ✅ 添加了完整的依赖包收集
+          - ✅ 优化了隐藏导入配置
+          - ✅ 禁用了UPX压缩避免兼容性问题
+          - ✅ 精简了构建参数避免命令过长
+          
+          ### 📥 下载说明
+          - **Windows用户**: 下载 `PD-Signal.exe` 直接运行
+          - 使用 `启动PD-Signal.bat` 可以看到控制台输出
+          - 详细说明请查看 `使用说明.txt`
+          - 修复详情请查看 `修复说明.txt`
+          
+          ### 🎯 修复效果
+          - 程序可以正常启动和运行
+          - 不再出现无限循环创建进程
+          - 包含所有必要的依赖包
+          - 构建过程更加稳定可靠
+          
+          ### 📋 功能特点
+          - ✅ 多主播监控
+          - ✅ 实时通知
+          - ✅ 现代化GUI界面
+          - ✅ 数据持久化存储
+          - ✅ 配置自动保存
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: 输出构建信息
+      shell: pwsh
+      run: |
+        Write-Output "=========================================="
+        Write-Output "🎉 修复版构建完成！"
+        Write-Output "=========================================="
+        Write-Output "📁 构建产物:"
+        Get-ChildItem "dist" | ForEach-Object {
+          $size = $_.Length / 1MB
+          Write-Output "   - $($_.Name) ($([math]::Round($size, 2)) MB)"
+        }
+        Write-Output ""
+        Write-Output "📦 修复版发布包:"
+        Get-ChildItem "release\PD-Signal-Fixed" | ForEach-Object {
+          Write-Output "   - $($_.Name)"
+        }
+        Write-Output ""
+        Write-Output "🔧 修复内容:"
+        Write-Output "   - 解决了无限循环创建进程的问题"
+        Write-Output "   - 添加了完整的依赖包收集"
+        Write-Output "   - 优化了隐藏导入配置"
+        Write-Output "   - 禁用了UPX压缩避免兼容性问题"
+        Write-Output ""
+        Write-Output "💡 使用说明:"
+        Write-Output "   1. 下载 PD-Signal.exe 运行程序"
+        Write-Output "   2. 使用 启动PD-Signal.bat 可查看控制台输出"
+        Write-Output "   3. 阅读 使用说明.txt 了解详细用法"
+        Write-Output "   4. 查看 修复说明.txt 了解修复详情"
+        Write-Output "=========================================="

@@ -54,7 +54,7 @@ jobs:
         
     - name: 构建可执行文件
       run: |
-        python build.py
+        python build_fixed.py
         
     - name: 验证构建结果
       shell: pwsh
